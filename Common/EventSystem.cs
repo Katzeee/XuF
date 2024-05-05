@@ -46,6 +46,17 @@ namespace Xuf
                 }
                 _events[@event](data);
             }
+
+            public void Broadcast(string eventName, in TEventData data)
+            {
+                if (!Enum.IsDefined(typeof(TEventType), eventName))
+                {
+                    Debug.LogWarning($"No event named {eventName}");
+                    return;
+                }
+                var @event = (TEventType)Enum.Parse(enumType: typeof(TEventType), @eventName, true);
+                Broadcast(@event, data);
+            }
         }
 
     }

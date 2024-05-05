@@ -11,59 +11,73 @@ namespace Xuf
             where TEventType : struct, Enum
             where TEventData : struct, IEventData
         {
-            Dictionary<string, GameObject> UIPanel = new();
+            Dictionary<Type, GameObject> UIPanel = new();
             CEventSystem<TEventType, TEventData> UIEventSystem = new();
             public Transform canvas;
 
-            public void RegisterUIPanel(string name, GameObject panel)
-            {
-                // UIPanel.Add(name, panel);
-                if (!UIPanel.TryAdd(name, panel))
-                {
-                    Debug.LogWarning($"UIPanel {name} has already be registered");
-                }
-            }
-
-            public void RemoveUIPanel(string name)
-            {
-                if (!UIPanel.Remove(name))
-                {
-                    Debug.LogWarning($"No UIPanel named {name}");
-                }
-            }
-
-            public void ActivateUI<TPanel>()
+            private void RegisterUIPanel<TPanel>() where TPanel : PanelBase<TEventType, TEventData>
             {
                 Type type = typeof(TPanel);
                 var attrs = (UIPrefab)Attribute.GetCustomAttribute(type, typeof(UIPrefab));
-                if (!UIPanel.ContainsKey(attrs.name))
+                if (attrs == null)
                 {
-                    GameObject uiPrefab = Resources.Load<GameObject>(attrs.path);
-                    RegisterUIPanel(attrs.name, uiPrefab);
-                    GameObject ui = GameObject.Instantiate(uiPrefab, canvas.transform);
-                    return;
+                    Debug.LogError($"Can't get attribute \"UIPrefab\" from {type}");
                 }
-                UIPanel[attrs.name].SetActive(true);
+                GameObject prefab = Resources.Load<GameObject>(attrs.path);
+                if (prefab == null)
+                {
+                    Debug.LogError($"Can't load ui prefab at {attrs.path}");
+                }
+                GameObject ui = GameObject.Instantiate(prefab, canvas);
+                if (!UIPanel.TryAdd(type, ui))
+                {
+                    Debug.LogWarning($"UIPanel {type} has already be registered");
+                }
+                ui.GetComponent<TPanel>().RegisterListeners();
+                ui.SetActive(false);
             }
 
-            public void DeActivateUI(string name)
+            public void RemoveUIPanel<TPanel>() where TPanel : PanelBase<TEventType, TEventData>
             {
-                if (!UIPanel.ContainsKey(name))
+                Type type = typeof(UIPrefab);
+                if (!UIPanel.Remove(type))
                 {
-                    Debug.LogError($"No UIPanel named {name}");
-                    return;
+                    Debug.LogWarning($"No registered UIPanel named {type}");
                 }
-                UIPanel[name].SetActive(false);
             }
 
-            public void ToggleUI(string name)
+            public void ActivateUI<TPanel>() where TPanel : PanelBase<TEventType, TEventData>
             {
-                if (!UIPanel.ContainsKey(name))
+                Type type = typeof(TPanel);
+                if (!UIPanel.ContainsKey(type))
                 {
-                    Debug.LogError($"No UIPanel named {name}");
+                    RegisterUIPanel<TPanel>();
+                }
+                UIPanel[type].SetActive(true);
+                UIEventSystem.Broadcast($"{type.Name}_PanelOpen", new());
+            }
+
+            public void DeActivateUI<TPanel>() where TPanel : PanelBase<TEventType, TEventData>
+            {
+                Type type = typeof(TPanel);
+                if (!UIPanel.ContainsKey(type))
+                {
+                    Debug.LogError($"No UIPanel named {type}");
                     return;
                 }
-                UIPanel[name].SetActive(!UIPanel[name].activeSelf);
+                UIPanel[type].SetActive(false);
+                UIEventSystem.Broadcast($"{type.Name}_PanelClose", new());
+            }
+
+            public void ToggleUI<TPanel>() where TPanel : PanelBase<TEventType, TEventData>
+            {
+                Type type = typeof(TPanel);
+                if (!UIPanel.ContainsKey(type))
+                {
+                    Debug.LogError($"No UIPanel named {type}");
+                    return;
+                }
+                UIPanel[type].SetActive(!UIPanel[type].activeSelf);
             }
 
             public void AddEventListener(TEventType @event, Action<TEventData> action)

@@ -22,18 +22,14 @@ namespace Xuf
             }
         }
 
-        public class PanelBase<TEventType, TEventData> : MonoBehaviour
+        public abstract class PanelBase<TEventType, TEventData> : MonoBehaviour
             where TEventType : struct, Enum
             where TEventData : struct, IEventData
         {
             static protected CUIManager<TEventType, TEventData> s_UIManager = CUIManager<TEventType, TEventData>.Instance;
 
-            public PanelBase()
-            {
-                // Register panel to UI Manager
-            }
+            abstract public void RegisterListeners();
 
-            // TODO: select enum from unity inspect window
             public void Broadcast(TEventType @event, in TEventData data)
             {
                 s_UIManager.Broadcast(@event, data);
@@ -42,7 +38,8 @@ namespace Xuf
             // use by unity editor button action
             public void Broadcast(string @eventName)
             {
-                var @event = (TEventType)Enum.Parse(typeof(TEventType), @eventName, true);
+                // TODO: select enum from unity inspect window
+                var @event = (TEventType)Enum.Parse(enumType: typeof(TEventType), @eventName, true);
                 s_UIManager.Broadcast(@event, new());
             }
         }
