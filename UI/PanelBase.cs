@@ -1,47 +1,44 @@
-using UnityEngine;
 using System;
 using Xuf.Common;
+using UnityEngine.EventSystems;
 
-namespace Xuf
+namespace Xuf.UI
 {
-    namespace UI
+    [AttributeUsage(AttributeTargets.Class | AttributeTargets.Constructor |
+        AttributeTargets.Field | AttributeTargets.Method |
+        AttributeTargets.Property)]
+    public class UIPrefab : Attribute
     {
-        [AttributeUsage(AttributeTargets.Class |
-            AttributeTargets.Constructor |
-            AttributeTargets.Field |
-            AttributeTargets.Method |
-            AttributeTargets.Property)]
-        public class UIPrefab : Attribute
+        public string path;
+        public UIPrefab(string name, string path)
         {
-            public string name;
-            public string path;
-            public UIPrefab(string name, string path)
-            {
-                this.name = name;
-                this.path = path;
-            }
+            // this.name = name;
+            this.path = path;
+        }
+    }
+
+    public abstract class PanelBase<TEventType> : UIBehaviour where TEventType : struct, Enum
+    {
+        static protected CUIManager<TEventType> s_UIManager = CUIManager<TEventType>.Instance;
+
+        abstract public void RegisterListeners();
+
+        public void Broadcast(TEventType @event, in CEventSystem<TEventType>.EventData data)
+        {
+            s_UIManager.Broadcast(@event, data);
         }
 
-        public abstract class PanelBase<TEventType, TEventData> : MonoBehaviour
-            where TEventType : struct, Enum
-            where TEventData : struct, IEventData
+        // use by unity editor button action
+        public void Broadcast(string eventName)
         {
-            static protected CUIManager<TEventType, TEventData> s_UIManager = CUIManager<TEventType, TEventData>.Instance;
-
-            abstract public void RegisterListeners();
-
-            public void Broadcast(TEventType @event, in TEventData data)
+            // TODO: select enum from unity inspect window
+            var eventId = (TEventType)Enum.Parse(enumType: typeof(TEventType), eventName, true);
+            CEventSystem<TEventType>.EventData @event = new()
             {
-                s_UIManager.Broadcast(@event, data);
-            }
-
-            // use by unity editor button action
-            public void Broadcast(string @eventName)
-            {
-                // TODO: select enum from unity inspect window
-                var @event = (TEventType)Enum.Parse(enumType: typeof(TEventType), @eventName, true);
-                s_UIManager.Broadcast(@event, new());
-            }
+                eventId = eventId,
+                from = transform
+            };
+            s_UIManager.Broadcast(eventId, new());
         }
     }
 }

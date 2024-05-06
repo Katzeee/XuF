@@ -2,63 +2,64 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace Xuf
+namespace Xuf.Common
 {
-    namespace Common
+
+
+    public class CEventSystem<TEventType> where TEventType : struct, Enum
     {
-
-        public interface IEventData { }
-
-        public class CEventSystem<TEventType, TEventData>
-            where TEventType : struct, Enum
-            where TEventData : struct, IEventData
+        public class EventData
         {
-            private Dictionary<TEventType, Action<TEventData>> _events = new();
-            public void AddEventListener(TEventType @event, Action<TEventData> action)
-            {
-                if (_events.ContainsKey(@event))
-                {
-                    _events[@event] += action;
-                }
-                else
-                {
-                    _events.Add(@event, action);
-                }
-
-            }
-
-            public void RemoveEvenetListener(TEventType @event, Action<TEventData> action)
-            {
-                if (!_events.ContainsKey(@event))
-                {
-                    Debug.LogWarning($"Event {@event} does not exist.");
-                    return;
-                }
-                _events[@event] -= action;
-            }
-
-            public void Broadcast(TEventType @event, in TEventData data)
-            {
-                if (!_events.ContainsKey(@event))
-                {
-                    Debug.LogWarning($"Event {@event} does not exist.");
-                    return;
-                }
-                _events[@event](data);
-            }
-
-            public void Broadcast(string eventName, in TEventData data)
-            {
-                if (!Enum.IsDefined(typeof(TEventType), eventName))
-                {
-                    Debug.LogWarning($"No event named {eventName}");
-                    return;
-                }
-                var @event = (TEventType)Enum.Parse(enumType: typeof(TEventType), @eventName, true);
-                Broadcast(@event, data);
-            }
+            public TEventType eventId;
+            public Transform from;
+            public object customData;
         }
 
+        private Dictionary<TEventType, Action<EventData>> _events = new();
+        public void AddEventListener(TEventType eventId, Action<EventData> action)
+        {
+            if (_events.ContainsKey(eventId))
+            {
+                _events[eventId] += action;
+            }
+            else
+            {
+                _events.Add(eventId, action);
+            }
+
+        }
+
+        public void RemoveEvenetListener(TEventType eventId, Action<EventData> action)
+        {
+            if (!_events.ContainsKey(eventId))
+            {
+                Debug.LogWarning($"Event {eventId} does not exist.");
+                return;
+            }
+            _events[eventId] -= action;
+        }
+
+        public void Broadcast(TEventType eventId, in EventData @event)
+        {
+            if (!_events.ContainsKey(eventId))
+            {
+                Debug.LogWarning($"Event {eventId} does not exist.");
+                return;
+            }
+            _events[eventId](@event);
+        }
+
+        public void Broadcast(string eventName, in EventData @event)
+        {
+            if (!Enum.IsDefined(typeof(TEventType), eventName))
+            {
+                Debug.LogWarning($"No event named {eventName}");
+                return;
+            }
+            var eventId = (TEventType)Enum.Parse(enumType: typeof(TEventType), @eventName, true);
+            Broadcast(eventId, @event);
+        }
     }
 
 }
+
