@@ -5,11 +5,9 @@ using Xuf.Common;
 
 namespace Xuf.UI
 {
-    public class CUIManager<TEventType> : Singleton<CUIManager<TEventType>>
-        where TEventType : struct, Enum
+    public class CUIManager : Singleton<CUIManager>
     {
         Dictionary<Type, GameObject> UIPanel = new();
-        CEventSystem<TEventType> UIEventSystem = new();
         private Transform _UIRoot;
         public Transform UIRoot
         {
@@ -31,7 +29,7 @@ namespace Xuf.UI
         //     UnityEngine.Object.DontDestroyOnLoad(UIRoot.gameObject);
         // }
 
-        private void RegisterUIPanel<TPanel>() where TPanel : PanelBase<TEventType>
+        private void RegisterUIPanel<TPanel>() where TPanel : PanelBase
         {
             Type type = typeof(TPanel);
             var attrs = (UIPrefab)Attribute.GetCustomAttribute(type, typeof(UIPrefab));
@@ -53,7 +51,7 @@ namespace Xuf.UI
             ui.SetActive(false);
         }
 
-        public void RemoveUIPanel<TPanel>() where TPanel : PanelBase<TEventType>
+        public void RemoveUIPanel<TPanel>()
         {
             Type type = typeof(UIPrefab);
             if (!UIPanel.Remove(type))
@@ -62,7 +60,7 @@ namespace Xuf.UI
             }
         }
 
-        public void ActivateUI<TPanel>() where TPanel : PanelBase<TEventType>
+        public void ActivateUI<TPanel>() where TPanel : PanelBase
         {
             Type type = typeof(TPanel);
             if (!UIPanel.ContainsKey(type))
@@ -70,10 +68,10 @@ namespace Xuf.UI
                 RegisterUIPanel<TPanel>();
             }
             UIPanel[type].SetActive(true);
-            UIEventSystem.Broadcast($"{type.Name}_PanelOpen", new());
+            CEventSystem.Instance.Broadcast($"{type.Name}_PanelOpen", new());
         }
 
-        public void DeActivateUI<TPanel>() where TPanel : PanelBase<TEventType>
+        public void DeActivateUI<TPanel>()
         {
             Type type = typeof(TPanel);
             if (!UIPanel.ContainsKey(type))
@@ -82,10 +80,10 @@ namespace Xuf.UI
                 return;
             }
             UIPanel[type].SetActive(false);
-            UIEventSystem.Broadcast($"{type.Name}_PanelClose", new());
+            CEventSystem.Instance.Broadcast($"{type.Name}_PanelClose", new());
         }
 
-        public void ToggleUI<TPanel>() where TPanel : PanelBase<TEventType>
+        public void ToggleUI<TPanel>()
         {
             Type type = typeof(TPanel);
             if (!UIPanel.ContainsKey(type))
@@ -96,19 +94,19 @@ namespace Xuf.UI
             UIPanel[type].SetActive(!UIPanel[type].activeSelf);
         }
 
-        public void AddEventListener(TEventType @event, Action<CEventSystem<TEventType>.EventData> action)
+        public void AddEventListener(EEventId eventId, Action<EventData> action)
         {
-            UIEventSystem.AddEventListener(@event, action);
+            CEventSystem.Instance.AddEventListener(eventId, action);
         }
 
-        public void RemoveEvenetListener(TEventType @event, Action<CEventSystem<TEventType>.EventData> action)
+        public void RemoveEvenetListener(EEventId eventId, Action<EventData> action)
         {
-            UIEventSystem.RemoveEvenetListener(@event, action);
+            CEventSystem.Instance.RemoveEventListener(eventId, action);
         }
 
-        public void Broadcast(TEventType @event, in CEventSystem<TEventType>.EventData data)
+        public void Broadcast(EEventId eventId, in EventData data)
         {
-            UIEventSystem.Broadcast(@event, data);
+            CEventSystem.Instance.Broadcast(eventId, data);
         }
     }
 }

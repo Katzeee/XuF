@@ -17,28 +17,26 @@ namespace Xuf.UI
         }
     }
 
-    public abstract class PanelBase<TEventType> : UIBehaviour where TEventType : struct, Enum
+    public abstract class PanelBase : UIBehaviour
     {
-        static protected CUIManager<TEventType> s_UIManager = CUIManager<TEventType>.Instance;
-
         abstract public void RegisterListeners();
 
-        public void Broadcast(TEventType @event, in CEventSystem<TEventType>.EventData data)
+        public void Broadcast(EEventId eventId, EventData data)
         {
-            s_UIManager.Broadcast(@event, data);
+            CUIManager.Instance.Broadcast(eventId, data);
         }
 
         // use by unity editor button action
         public void Broadcast(string eventName)
         {
             // TODO: select enum from unity inspect window
-            var eventId = (TEventType)Enum.Parse(enumType: typeof(TEventType), eventName, true);
-            CEventSystem<TEventType>.EventData @event = new()
+            var eventId = (EEventId)Enum.Parse(enumType: typeof(EEventId), eventName, true);
+            var @event = new EventData()
             {
                 eventId = eventId,
                 from = transform
             };
-            s_UIManager.Broadcast(eventId, new());
+            CUIManager.Instance.Broadcast(eventId, new());
         }
     }
 }
