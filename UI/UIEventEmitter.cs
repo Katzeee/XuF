@@ -4,7 +4,7 @@ using Xuf.UI;
 
 namespace Xuf.Common
 {
-    class CEventEmitter : MonoBehaviour, IPointerClickHandler, IPointerUpHandler, IPointerDownHandler
+    class CUIEventEmitter : MonoBehaviour, IPointerClickHandler, IPointerUpHandler, IPointerDownHandler
     {
         public EEventId eventPointerClick;
         public EEventId eventPointerDown;
