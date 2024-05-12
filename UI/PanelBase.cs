@@ -21,7 +21,7 @@ namespace Xuf.UI
     {
         abstract public void RegisterListeners();
 
-        public void Broadcast(EEventId eventId, EventData data)
+        public void Broadcast(EEventId eventId, CEventData data)
         {
             CUIManager.Instance.Broadcast(eventId, data);
         }
@@ -31,9 +31,9 @@ namespace Xuf.UI
         {
             // TODO: select enum from unity inspect window
             var eventId = (EEventId)Enum.Parse(enumType: typeof(EEventId), eventName, true);
-            var @event = new EventData()
+            var @event = new CEventData()
             {
-                eventId = eventId,
+                EventId = eventId,
                 from = transform
             };
             CUIManager.Instance.Broadcast(eventId, new());

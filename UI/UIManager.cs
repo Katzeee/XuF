@@ -94,17 +94,17 @@ namespace Xuf.UI
             UIPanel[type].SetActive(!UIPanel[type].activeSelf);
         }
 
-        public void AddEventListener(EEventId eventId, Action<EventData> action)
-        {
-            CEventSystem.Instance.AddEventListener(eventId, action);
-        }
+        // public void AddEventListener(EEventId eventId, Action<CEventData> action)
+        // {
+        //     CEventSystem.Instance.AddEventListener(eventId, action);
+        // }
 
-        public void RemoveEvenetListener(EEventId eventId, Action<EventData> action)
-        {
-            CEventSystem.Instance.RemoveEventListener(eventId, action);
-        }
+        // public void RemoveEvenetListener(EEventId eventId, Action<CEventData> action)
+        // {
+        //     CEventSystem.Instance.RemoveEventListener(eventId, action);
+        // }
 
-        public void Broadcast(EEventId eventId, in EventData data)
+        public void Broadcast(EEventId eventId, in CEventData data)
         {
             CEventSystem.Instance.Broadcast(eventId, data);
         }

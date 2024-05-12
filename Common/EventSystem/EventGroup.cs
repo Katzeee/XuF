@@ -13,19 +13,19 @@ namespace Xuf.Common
         public bool m_isEnable = true;
         public EEventId m_eventOrGroup = EEventId.None;
         public EventGroup m_parent;
-        private Action<EventData> action;
+        private Action<CEventData> action;
 
-        public void AddEventListener(Action<EventData> action)
+        public void AddEventListener(Action<CEventData> action)
         {
             this.action += action;
         }
 
-        public void RemoveEventListener(Action<EventData> action)
+        public void RemoveEventListener(Action<CEventData> action)
         {
             this.action -= action;
         }
 
-        public void Broadcast(in EventData @event)
+        public void Broadcast(in CEventData @event)
         {
             if (!IsDisabled())
             {

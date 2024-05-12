@@ -12,9 +12,9 @@ namespace Xuf.Common
 
         public void OnPointerClick(PointerEventData data)
         {
-            var eventData = new EventData()
+            var eventData = new CEventData()
             {
-                eventId = eventPointerClick,
+                EventId = eventPointerClick,
                 from = transform
             };
             CUIManager.Instance.Broadcast(eventPointerClick, eventData);
@@ -22,18 +22,18 @@ namespace Xuf.Common
 
         public void OnPointerDown(PointerEventData data)
         {
-            var eventData = new EventData()
+            var eventData = new CEventData()
             {
-                eventId = eventPointerDown,
+                EventId = eventPointerDown,
                 from = transform
             };
             CUIManager.Instance.Broadcast(eventPointerDown, eventData);
         }
         public void OnPointerUp(PointerEventData data)
         {
-            var eventData = new EventData()
+            var eventData = new CEventData()
             {
-                eventId = eventPointerUp,
+                EventId = eventPointerUp,
                 from = transform
             };
             CUIManager.Instance.Broadcast(eventPointerUp, eventData);

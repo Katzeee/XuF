@@ -4,9 +4,9 @@ using UnityEngine;
 
 namespace Xuf.Common
 {
-    public class EventData
+    public class CEventData
     {
-        public EEventId eventId;
+        public EEventId EventId { get; internal set; }
         public Transform from;
         private object customData;
         public object CustomData
@@ -37,7 +37,7 @@ namespace Xuf.Common
             m_eventGroups.Add(EEventId.GRoot, eventGroup);
         }
 
-        public void AddEventListener(EEventId eventId, Action<EventData> action)
+        public void AddEventListener(EEventId eventId, Action<CEventData> action)
         {
             if (!m_eventGroups.ContainsKey(eventId))
             {
@@ -47,7 +47,7 @@ namespace Xuf.Common
             m_eventGroups[eventId].AddEventListener(action);
         }
 
-        public void RemoveEventListener(EEventId eventId, Action<EventData> action)
+        public void RemoveEventListener(EEventId eventId, Action<CEventData> action)
         {
             if (!m_eventGroups.ContainsKey(eventId))
             {
@@ -109,7 +109,7 @@ namespace Xuf.Common
             return eventGroup;
         }
 
-        public void Broadcast(EEventId eventId, in EventData @event)
+        public void Broadcast(EEventId eventId, in CEventData @event)
         {
             if (eventId == EEventId.None)
             {
@@ -120,10 +120,11 @@ namespace Xuf.Common
                 Debug.LogWarning($"Event {eventId} does not exist.");
                 return;
             }
+            @event.EventId = eventId;
             m_eventGroups[eventId].Broadcast(@event);
         }
 
-        public void Broadcast(string eventName, in EventData @event)
+        public void Broadcast(string eventName, in CEventData @event)
         {
             if (!Enum.IsDefined(typeof(EEventId), eventName))
             {
