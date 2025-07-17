@@ -136,7 +136,7 @@ namespace Xuf.Core
                 Debug.LogWarning($"No event named {eventName}");
                 return;
             }
-            var eventId = (EEventId)Enum.Parse(enumType: typeof(EEventId), @eventName, true);
+            var eventId = (EEventId) Enum.Parse(enumType: typeof(EEventId), @eventName, true);
             Broadcast(eventId, @event);
         }
 
@@ -174,7 +174,7 @@ namespace Xuf.Core
                 if (parts.Length < 2)
                 {
                     // No hierarchy, register directly under GRoot as event
-                    var eventId = (EEventId)Enum.Parse(eventType, name);
+                    var eventId = (EEventId) Enum.Parse(eventType, name);
                     if (!m_eventGroups.ContainsKey(eventId))
                     {
                         TryAddEventUnderGroup(eventId, EEventId.GRoot);
@@ -186,7 +186,7 @@ namespace Xuf.Core
                 // Register first group if not exists
                 if (Enum.IsDefined(eventType, groupPrefix))
                 {
-                    var groupId = (EEventId)Enum.Parse(eventType, groupPrefix);
+                    var groupId = (EEventId) Enum.Parse(eventType, groupPrefix);
                     if (!m_eventGroups.ContainsKey(groupId))
                     {
                         TryAddGroupUnderGroup(groupId, EEventId.GRoot);
@@ -199,7 +199,7 @@ namespace Xuf.Core
                     groupPrefix += "_" + parts[i];
                     if (!Enum.IsDefined(eventType, groupPrefix))
                         continue;
-                    var groupId = (EEventId)Enum.Parse(eventType, groupPrefix);
+                    var groupId = (EEventId) Enum.Parse(eventType, groupPrefix);
                     if (!m_eventGroups.ContainsKey(groupId))
                     {
                         TryAddGroupUnderGroup(groupId, parentGroupId);
@@ -207,7 +207,7 @@ namespace Xuf.Core
                     parentGroupId = groupId;
                 }
                 // Register the event under the last group
-                var eventIdFinal = (EEventId)Enum.Parse(eventType, name);
+                var eventIdFinal = (EEventId) Enum.Parse(eventType, name);
                 if (!m_eventGroups.ContainsKey(eventIdFinal))
                 {
                     TryAddEventUnderGroup(eventIdFinal, parentGroupId);

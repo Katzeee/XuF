@@ -56,7 +56,7 @@ namespace Xuf.UI
         private void RegisterUIForm<TForm>() where TForm : FormBase
         {
             Type type = typeof(TForm);
-            var attrs = (UIPrefab)Attribute.GetCustomAttribute(type, typeof(UIPrefab));
+            var attrs = (UIPrefab) Attribute.GetCustomAttribute(type, typeof(UIPrefab));
             if (attrs == null)
             {
                 Debug.LogError($"Can't get attribute \"UIPrefab\" from {type}");

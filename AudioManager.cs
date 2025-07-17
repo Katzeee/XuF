@@ -12,7 +12,7 @@ namespace Xuf.Common
             base.Awake();
             bgSrc = gameObject.AddComponent<AudioSource>();
             bgSrc.volume = 0.2f;
-            fxSrc = gameObject.AddComponent<AudioSource>();;
+            fxSrc = gameObject.AddComponent<AudioSource>(); ;
             fxSrc.volume = 0.2f;
         }
 
