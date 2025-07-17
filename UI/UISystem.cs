@@ -2,8 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using Xuf.Common;
-using Xuf.Core.EventSystem;
-using Xuf.Core.GameSystem;
+using Xuf.Core;
 
 namespace Xuf.UI
 {

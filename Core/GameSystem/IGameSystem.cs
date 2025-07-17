@@ -1,4 +1,4 @@
-namespace Xuf.Core.GameSystem
+namespace Xuf.Core
 {
   public interface IGameSystem
   {

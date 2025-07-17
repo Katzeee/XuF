@@ -2,10 +2,8 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
-using Xuf.Common;
 using UnityEngine.UI;
-using Xuf.Core.EventSystem;
-using Xuf.Core.GameSystem;
+using Xuf.Core;
 
 namespace Xuf.UI
 {

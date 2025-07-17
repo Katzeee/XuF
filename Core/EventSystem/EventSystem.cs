@@ -1,9 +1,8 @@
 using System;
 using System.Collections.Generic;
-using Xuf.Core.GameSystem;
 using UnityEngine;
 
-namespace Xuf.Core.EventSystem
+namespace Xuf.Core
 {
     public class CEventData
     {

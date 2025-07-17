@@ -1,7 +1,6 @@
 using System;
-using Xuf.Common;
 using UnityEngine.EventSystems;
-using Xuf.Core.EventSystem;
+using Xuf.Core;
 
 namespace Xuf.UI
 {

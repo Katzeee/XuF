@@ -1,6 +1,6 @@
 using System;
 
-namespace Xuf.Core.EventSystem
+namespace Xuf.Core
 {
     /// <summary>
     /// A EventGroup could be a group contians a lot of children groups,
