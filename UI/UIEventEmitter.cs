@@ -4,9 +4,11 @@ using Xuf.UI;
 
 namespace Xuf.Common
 {
+    // TODO: let the event with custom data
     class CUIEventEmitter : MonoBehaviour, IPointerClickHandler, IPointerUpHandler, IPointerDownHandler
     {
         public EEventId eventPointerClick;
+        public ScriptableObject dataPointerClick;
         public EEventId eventPointerDown;
         public EEventId eventPointerUp;
 
@@ -14,29 +16,37 @@ namespace Xuf.Common
         {
             var eventData = new CEventData()
             {
-                EventId = eventPointerClick,
-                from = transform
+                from = transform,
+                CustomData = dataPointerClick,
             };
-            CUIManager.Instance.Broadcast(eventPointerClick, eventData);
+            CEventSystem.Instance.Broadcast(eventPointerClick, eventData);
         }
 
         public void OnPointerDown(PointerEventData data)
         {
             var eventData = new CEventData()
             {
-                EventId = eventPointerDown,
                 from = transform
             };
-            CUIManager.Instance.Broadcast(eventPointerDown, eventData);
+            CEventSystem.Instance.Broadcast(eventPointerDown, eventData);
         }
         public void OnPointerUp(PointerEventData data)
         {
             var eventData = new CEventData()
             {
-                EventId = eventPointerUp,
                 from = transform
             };
-            CUIManager.Instance.Broadcast(eventPointerUp, eventData);
+            CEventSystem.Instance.Broadcast(eventPointerUp, eventData);
+        }
+
+        // For Animation Broadcast
+        public void Broadcast(EEventId @event)
+        {
+            var eventData = new CEventData()
+            {
+                from = transform,
+            };
+            CEventSystem.Instance.Broadcast(@event, eventData);
         }
     }
 }

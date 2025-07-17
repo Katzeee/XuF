@@ -5,7 +5,7 @@ using Xuf.Common;
 
 namespace Xuf.UI
 {
-    public class CUIManager : Singleton<CUIManager>
+    public class CUIManager : CSingleton<CUIManager>
     {
         Dictionary<Type, GameObject> UIPanel = new();
         private Transform _UIRoot;
@@ -36,18 +36,26 @@ namespace Xuf.UI
             if (attrs == null)
             {
                 Debug.LogError($"Can't get attribute \"UIPrefab\" from {type}");
+                return;
             }
             GameObject prefab = Resources.Load<GameObject>(attrs.path);
             if (prefab == null)
             {
                 Debug.LogError($"Can't load ui prefab at {attrs.path}");
+                return;
             }
             GameObject ui = GameObject.Instantiate(prefab, UIRoot);
             if (!UIPanel.TryAdd(type, ui))
             {
                 Debug.LogWarning($"UIPanel {type} has already be registered");
+                return;
             }
-            ui.GetComponent<TPanel>().RegisterListeners();
+            var panel = ui.GetComponent<TPanel>();
+            if (panel == null)
+            {
+                Debug.LogWarning($"UIPanel {type} has no PanelBase attached.");
+                return;
+            }
             ui.SetActive(false);
         }
 
@@ -68,10 +76,11 @@ namespace Xuf.UI
                 RegisterUIPanel<TPanel>();
             }
             UIPanel[type].SetActive(true);
+            UIPanel[type].GetComponent<TPanel>().OnActivate();
             CEventSystem.Instance.Broadcast($"{type.Name}_PanelOpen", new());
         }
 
-        public void DeActivateUI<TPanel>()
+        public void DeActivateUI<TPanel>() where TPanel : PanelBase
         {
             Type type = typeof(TPanel);
             if (!UIPanel.ContainsKey(type))
@@ -79,6 +88,7 @@ namespace Xuf.UI
                 Debug.LogError($"No UIPanel named {type}");
                 return;
             }
+            UIPanel[type].GetComponent<TPanel>().OnDeActivate();
             UIPanel[type].SetActive(false);
             CEventSystem.Instance.Broadcast($"{type.Name}_PanelClose", new());
         }

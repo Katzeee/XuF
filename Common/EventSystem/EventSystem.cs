@@ -23,7 +23,7 @@ namespace Xuf.Common
         }
     }
 
-    public class CEventSystem : Singleton<CEventSystem>
+    public class CEventSystem : CSingleton<CEventSystem>
     {
         // private Dictionary<EEventId, Action<EventData>> m_events = new();
         private Dictionary<EEventId, EventGroup> m_eventGroups = new();
@@ -35,6 +35,7 @@ namespace Xuf.Common
                 m_isGroup = true,
             };
             m_eventGroups.Add(EEventId.GRoot, eventGroup);
+            // TODO: read events and register
         }
 
         public void AddEventListener(EEventId eventId, Action<CEventData> action)
@@ -143,6 +144,16 @@ namespace Xuf.Common
                 return;
             }
             m_eventGroups[eventId].m_isEnable = false;
+        }
+
+        public void Enable(EEventId eventId)
+        {
+            if (!m_eventGroups.ContainsKey(eventId))
+            {
+                Debug.LogWarning($"Event {eventId} does not exist.");
+                return;
+            }
+            m_eventGroups[eventId].m_isEnable = true;
         }
     }
 

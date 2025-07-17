@@ -2,7 +2,7 @@ using UnityEngine;
 
 namespace Xuf.Common
 {
-    public class AudioManager : MonoSingleton<AudioManager>
+    public class AudioManager : CMonoSingleton<AudioManager>
     {
         public AudioSource bgSrc;
         public AudioSource fxSrc;

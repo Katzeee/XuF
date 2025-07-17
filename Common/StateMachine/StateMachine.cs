@@ -52,12 +52,17 @@ namespace Xuf.Common
                 return;
             }
             m_stateStack.Pop().OnExit();
-            m_stateStack.Peek().OnEnter();
+            m_stateStack.Peek()?.OnEnter();
+        }
+
+        public void Clear()
+        {
+            m_stateStack.Clear();
         }
 
         public void OnUpdate()
         {
-            m_stateStack.Peek().OnUpdate();
+            m_stateStack.Peek()?.OnUpdate();
         }
     }
 }

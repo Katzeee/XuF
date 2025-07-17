@@ -19,7 +19,8 @@ namespace Xuf.UI
 
     public abstract class PanelBase : UIBehaviour
     {
-        abstract public void RegisterListeners();
+        abstract public void OnActivate();
+        abstract public void OnDeActivate();
 
         public void Broadcast(EEventId eventId, CEventData data)
         {

@@ -1,22 +1,19 @@
-namespace Xuf
+namespace Xuf.Common
 {
-    namespace Common
+    public class CSingleton<T> where T : class, new()
     {
-        public class Singleton<T> where T : class, new()
+        private static T instance;
+
+        public static T Instance
         {
-            private static T instance;
-
-            public static T Instance
+            get
             {
-                get
+                if (instance == null)
                 {
-                    if (instance == null)
-                    {
-                        instance = new T();
-                    }
-
-                    return instance;
+                    instance = new T();
                 }
+
+                return instance;
             }
         }
     }
