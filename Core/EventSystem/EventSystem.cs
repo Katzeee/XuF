@@ -1,8 +1,9 @@
 using System;
 using System.Collections.Generic;
+using Xuf.Core.GameSystem;
 using UnityEngine;
 
-namespace Xuf.Common
+namespace Xuf.Core.EventSystem
 {
     public class CEventData
     {
@@ -23,11 +24,14 @@ namespace Xuf.Common
         }
     }
 
-    public class CEventSystem : CSingleton<CEventSystem>
+    public class CEventSystem : IGameSystem
     {
         // private Dictionary<EEventId, Action<EventData>> m_events = new();
         private Dictionary<EEventId, EventGroup> m_eventGroups = new();
 
+        public int Priority => 900;
+
+        public void Update(float deltaTime, float unscaledDeltaTime) { }
         public CEventSystem()
         {
             var eventGroup = new EventGroup()
@@ -35,27 +39,28 @@ namespace Xuf.Common
                 m_isGroup = true,
             };
             m_eventGroups.Add(EEventId.GRoot, eventGroup);
-            // TODO: read events and register
+            // Automatically register all events and their hierarchy
+            AutoRegisterAllEvents();
         }
 
-        public void AddEventListener(EEventId eventId, Action<CEventData> action)
+        public void AddEventListener(EEventId eventId, Func<CEventData, bool> handler)
         {
             if (!m_eventGroups.ContainsKey(eventId))
             {
                 Debug.LogError($"Eventgroup {eventId} doesn't exsit!");
                 return;
             }
-            m_eventGroups[eventId].AddEventListener(action);
+            m_eventGroups[eventId].AddEventListener(handler);
         }
 
-        public void RemoveEventListener(EEventId eventId, Action<CEventData> action)
+        public void RemoveEventListener(EEventId eventId, Func<CEventData, bool> handler)
         {
             if (!m_eventGroups.ContainsKey(eventId))
             {
                 Debug.LogError($"Eventgroup {eventId} doesn't exsit!");
                 return;
             }
-            m_eventGroups[eventId].RemoveEventListener(action);
+            m_eventGroups[eventId].RemoveEventListener(handler);
         }
 
         public EventGroup TryAddGroupUnderGroup(EEventId childGroupId, EEventId parentGroupId = EEventId.None)
@@ -155,7 +160,63 @@ namespace Xuf.Common
             }
             m_eventGroups[eventId].m_isEnable = true;
         }
+
+        // Automatically register all events and their hierarchy
+        private void AutoRegisterAllEvents()
+        {
+            var eventType = typeof(EEventId);
+            var names = Enum.GetNames(eventType);
+            foreach (var name in names)
+            {
+                if (name == nameof(EEventId.None) || name == nameof(EEventId.GRoot))
+                    continue;
+                // Split by '_', build hierarchy for any event with underscores
+                var parts = name.Split('_');
+                if (parts.Length < 2)
+                {
+                    // No hierarchy, register directly under GRoot as event
+                    var eventId = (EEventId)Enum.Parse(eventType, name);
+                    if (!m_eventGroups.ContainsKey(eventId))
+                    {
+                        TryAddEventUnderGroup(eventId, EEventId.GRoot);
+                    }
+                    continue;
+                }
+                string groupPrefix = parts[0];
+                EEventId parentGroupId = EEventId.GRoot;
+                // Register first group if not exists
+                if (Enum.IsDefined(eventType, groupPrefix))
+                {
+                    var groupId = (EEventId)Enum.Parse(eventType, groupPrefix);
+                    if (!m_eventGroups.ContainsKey(groupId))
+                    {
+                        TryAddGroupUnderGroup(groupId, EEventId.GRoot);
+                    }
+                    parentGroupId = groupId;
+                }
+                // Register subgroups if any
+                for (int i = 1; i < parts.Length - 1; i++)
+                {
+                    groupPrefix += "_" + parts[i];
+                    if (!Enum.IsDefined(eventType, groupPrefix))
+                        continue;
+                    var groupId = (EEventId)Enum.Parse(eventType, groupPrefix);
+                    if (!m_eventGroups.ContainsKey(groupId))
+                    {
+                        TryAddGroupUnderGroup(groupId, parentGroupId);
+                    }
+                    parentGroupId = groupId;
+                }
+                // Register the event under the last group
+                var eventIdFinal = (EEventId)Enum.Parse(eventType, name);
+                if (!m_eventGroups.ContainsKey(eventIdFinal))
+                {
+                    TryAddEventUnderGroup(eventIdFinal, parentGroupId);
+                }
+            }
+        }
     }
 
 }
+
 

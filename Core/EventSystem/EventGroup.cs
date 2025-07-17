@@ -1,7 +1,6 @@
 using System;
-using System.Collections.Generic;
 
-namespace Xuf.Common
+namespace Xuf.Core.EventSystem
 {
     /// <summary>
     /// A EventGroup could be a group contians a lot of children groups,
@@ -13,26 +12,38 @@ namespace Xuf.Common
         public bool m_isEnable = true;
         public EEventId m_eventOrGroup = EEventId.None;
         public EventGroup m_parent;
-        private Action<CEventData> action;
+        private Func<CEventData, bool> handler;
 
-        public void AddEventListener(Action<CEventData> action)
+        public void AddEventListener(Func<CEventData, bool> handler)
         {
-            this.action += action;
+            this.handler += handler;
         }
 
-        public void RemoveEventListener(Action<CEventData> action)
+        public void RemoveEventListener(Func<CEventData, bool> handler)
         {
-            this.action -= action;
+            this.handler -= handler;
         }
 
         public void Broadcast(in CEventData @event)
         {
-            if (!IsDisabled())
+            if (IsDisabled())
             {
-                if (action != null)
+                return;
+            }
+            bool intercepted = false;
+            if (handler != null)
+            {
+                foreach (Func<CEventData, bool> singleHandler in handler.GetInvocationList())
                 {
-                    action(@event);
+                    if (singleHandler(@event))
+                    {
+                        intercepted = true;
+                        break;
+                    }
                 }
+            }
+            if (!intercepted)
+            {
                 m_parent?.Broadcast(@event);
             }
         }
@@ -53,3 +64,4 @@ namespace Xuf.Common
     }
 
 }
+

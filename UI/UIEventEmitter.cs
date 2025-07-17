@@ -5,7 +5,7 @@ using UnityEngine.EventSystems;
 using Xuf.Common;
 using UnityEngine.UI;
 using Xuf.Core.EventSystem;
-using Xuf.Core.GameManager;
+using Xuf.Core.GameSystem;
 
 namespace Xuf.UI
 {
@@ -26,7 +26,7 @@ namespace Xuf.UI
         private void Awake()
         {
             // Get the event system reference
-            m_eventSystem = CGameManager.Instance.GetSystem<CEventSystem>();
+            m_eventSystem = CSystemManager.Instance.GetSystem<CEventSystem>();
             if (m_eventSystem == null)
             {
                 Debug.LogError("Failed to get EventSystem from GameManager. Make sure it's registered.");
@@ -82,7 +82,7 @@ namespace Xuf.UI
             // Check if event system reference is valid
             if (m_eventSystem == null)
             {
-                m_eventSystem = CGameManager.Instance.GetSystem<CEventSystem>();
+                m_eventSystem = CSystemManager.Instance.GetSystem<CEventSystem>();
                 if (m_eventSystem == null)
                 {
                     Debug.LogError("EventSystem not found in GameManager");
@@ -187,7 +187,7 @@ namespace Xuf.UI
             // Check if event system reference is valid
             if (m_eventSystem == null)
             {
-                m_eventSystem = CGameManager.Instance.GetSystem<CEventSystem>();
+                m_eventSystem = CSystemManager.Instance.GetSystem<CEventSystem>();
                 if (m_eventSystem == null)
                 {
                     Debug.LogError("EventSystem not found in GameManager");

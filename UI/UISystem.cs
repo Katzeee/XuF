@@ -3,28 +3,39 @@ using System.Collections.Generic;
 using UnityEngine;
 using Xuf.Common;
 using Xuf.Core.EventSystem;
-using Xuf.Core.GameManager;
+using Xuf.Core.GameSystem;
 
 namespace Xuf.UI
 {
     /// <summary>
     /// UI Manager system, should be registered and managed by GameManager.
     /// </summary>
-    public class CUIManager : IGameSystem
+    public class CUISystem : IGameSystem
     {
-        Dictionary<Type, GameObject> UIPanel = new();
+        public CUISystem(Transform gameEntry)
+        {
+            _UIRoot = gameEntry.Find("UIRoot");
+            if (_UIRoot == null)
+            {
+                Debug.LogError("Fatal: not set UIRoot");
+                throw new Exception("");
+            }
+            _UIRoot.SetParent(gameEntry);
+        }
+
+        Dictionary<Type, GameObject> UIForm = new();
         private Transform _UIRoot;
-        private CEventSystem m_eventSystem = CGameManager.Instance.GetSystem<CEventSystem>();
+        private CEventSystem m_eventSystem = CSystemManager.Instance.GetSystem<CEventSystem>();
 
         /// <summary>
         /// Priority of the UI system. Lower than event system, higher than most logic systems.
         /// </summary>
-        public override int Priority => 500;
+        public int Priority => 500;
 
         /// <summary>
         /// Update method for the UI system. (Empty for now)
         /// </summary>
-        public override void Update(float deltaTime, float unscaledDeltaTime)
+        public void Update(float deltaTime, float unscaledDeltaTime)
         {
             // UI system update logic (if needed)
         }
@@ -43,9 +54,9 @@ namespace Xuf.UI
             set => _UIRoot = value;
         }
 
-        private void RegisterUIPanel<TPanel>() where TPanel : PanelBase
+        private void RegisterUIForm<TForm>() where TForm : FormBase
         {
-            Type type = typeof(TPanel);
+            Type type = typeof(TForm);
             var attrs = (UIPrefab)Attribute.GetCustomAttribute(type, typeof(UIPrefab));
             if (attrs == null)
             {
@@ -59,67 +70,67 @@ namespace Xuf.UI
                 return;
             }
             GameObject ui = GameObject.Instantiate(prefab, UIRoot);
-            if (!UIPanel.TryAdd(type, ui))
+            if (!UIForm.TryAdd(type, ui))
             {
-                Debug.LogWarning($"UIPanel {type} has already be registered");
+                Debug.LogWarning($"UIForm {type} has already be registered");
                 return;
             }
-            var panel = ui.GetComponent<TPanel>();
-            if (panel == null)
+            var Form = ui.GetComponent<TForm>();
+            if (Form == null)
             {
-                Debug.LogWarning($"UIPanel {type} has no PanelBase attached.");
+                Debug.LogWarning($"UIForm {type} has no FormBase attached.");
                 return;
             }
             ui.SetActive(false);
         }
 
-        public void RemoveUIPanel<TPanel>()
+        public void RemoveUIForm<TForm>()
         {
             Type type = typeof(UIPrefab);
-            if (!UIPanel.Remove(type))
+            if (!UIForm.Remove(type))
             {
-                Debug.LogWarning($"No registered UIPanel named {type}");
+                Debug.LogWarning($"No registered UIForm named {type}");
             }
         }
 
-        public void OpenForm<TPanel>() where TPanel : PanelBase
+        public void OpenForm<TForm>() where TForm : FormBase
         {
-            Type type = typeof(TPanel);
-            if (!UIPanel.ContainsKey(type))
+            Type type = typeof(TForm);
+            if (!UIForm.ContainsKey(type))
             {
-                RegisterUIPanel<TPanel>();
+                RegisterUIForm<TForm>();
             }
-            UIPanel[type].SetActive(true);
-            UIPanel[type].GetComponent<TPanel>().OnActivate();
+            UIForm[type].SetActive(true);
+            UIForm[type].GetComponent<TForm>().OnActivate();
 
             var eventData = new CEventData();
-            m_eventSystem.Broadcast($"{type.Name}_PanelOpen", eventData);
+            m_eventSystem.Broadcast($"{type.Name}_FormOpen", eventData);
         }
 
-        public void CloseForm<TPanel>() where TPanel : PanelBase
+        public void CloseForm<TForm>() where TForm : FormBase
         {
-            Type type = typeof(TPanel);
-            if (!UIPanel.ContainsKey(type))
+            Type type = typeof(TForm);
+            if (!UIForm.ContainsKey(type))
             {
-                Debug.LogError($"No UIPanel named {type}");
+                Debug.LogError($"No UIForm named {type}");
                 return;
             }
-            UIPanel[type].GetComponent<TPanel>().OnDeActivate();
-            UIPanel[type].SetActive(false);
+            UIForm[type].GetComponent<TForm>().OnDeActivate();
+            UIForm[type].SetActive(false);
 
             var eventData = new CEventData();
-            m_eventSystem.Broadcast($"{type.Name}_PanelClose", eventData);
+            m_eventSystem.Broadcast($"{type.Name}_FormClose", eventData);
         }
 
-        public void ToggleForm<TPanel>()
+        public void ToggleForm<TForm>()
         {
-            Type type = typeof(TPanel);
-            if (!UIPanel.ContainsKey(type))
+            Type type = typeof(TForm);
+            if (!UIForm.ContainsKey(type))
             {
-                Debug.LogError($"No UIPanel named {type}");
+                Debug.LogError($"No UIForm named {type}");
                 return;
             }
-            UIPanel[type].SetActive(!UIPanel[type].activeSelf);
+            UIForm[type].SetActive(!UIForm[type].activeSelf);
         }
 
         public void Broadcast(EEventId eventId, in CEventData data)
