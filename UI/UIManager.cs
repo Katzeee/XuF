@@ -2,13 +2,33 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using Xuf.Common;
+using Xuf.Core.EventSystem;
+using Xuf.Core.GameManager;
 
 namespace Xuf.UI
 {
-    public class CUIManager : CSingleton<CUIManager>
+    /// <summary>
+    /// UI Manager system, should be registered and managed by GameManager.
+    /// </summary>
+    public class CUIManager : IGameSystem
     {
         Dictionary<Type, GameObject> UIPanel = new();
         private Transform _UIRoot;
+        private CEventSystem m_eventSystem = CGameManager.Instance.GetSystem<CEventSystem>();
+
+        /// <summary>
+        /// Priority of the UI system. Lower than event system, higher than most logic systems.
+        /// </summary>
+        public override int Priority => 500;
+
+        /// <summary>
+        /// Update method for the UI system. (Empty for now)
+        /// </summary>
+        public override void Update(float deltaTime, float unscaledDeltaTime)
+        {
+            // UI system update logic (if needed)
+        }
+
         public Transform UIRoot
         {
             get
@@ -22,12 +42,6 @@ namespace Xuf.UI
             }
             set => _UIRoot = value;
         }
-
-        // public CUIManager()
-        // {
-        //     UIRoot = new GameObject("UIRoot").transform;
-        //     UnityEngine.Object.DontDestroyOnLoad(UIRoot.gameObject);
-        // }
 
         private void RegisterUIPanel<TPanel>() where TPanel : PanelBase
         {
@@ -68,7 +82,7 @@ namespace Xuf.UI
             }
         }
 
-        public void ActivateUI<TPanel>() where TPanel : PanelBase
+        public void OpenForm<TPanel>() where TPanel : PanelBase
         {
             Type type = typeof(TPanel);
             if (!UIPanel.ContainsKey(type))
@@ -77,10 +91,12 @@ namespace Xuf.UI
             }
             UIPanel[type].SetActive(true);
             UIPanel[type].GetComponent<TPanel>().OnActivate();
-            CEventSystem.Instance.Broadcast($"{type.Name}_PanelOpen", new());
+
+            var eventData = new CEventData();
+            m_eventSystem.Broadcast($"{type.Name}_PanelOpen", eventData);
         }
 
-        public void DeActivateUI<TPanel>() where TPanel : PanelBase
+        public void CloseForm<TPanel>() where TPanel : PanelBase
         {
             Type type = typeof(TPanel);
             if (!UIPanel.ContainsKey(type))
@@ -90,10 +106,12 @@ namespace Xuf.UI
             }
             UIPanel[type].GetComponent<TPanel>().OnDeActivate();
             UIPanel[type].SetActive(false);
-            CEventSystem.Instance.Broadcast($"{type.Name}_PanelClose", new());
+
+            var eventData = new CEventData();
+            m_eventSystem.Broadcast($"{type.Name}_PanelClose", eventData);
         }
 
-        public void ToggleUI<TPanel>()
+        public void ToggleForm<TPanel>()
         {
             Type type = typeof(TPanel);
             if (!UIPanel.ContainsKey(type))
@@ -104,19 +122,9 @@ namespace Xuf.UI
             UIPanel[type].SetActive(!UIPanel[type].activeSelf);
         }
 
-        // public void AddEventListener(EEventId eventId, Action<CEventData> action)
-        // {
-        //     CEventSystem.Instance.AddEventListener(eventId, action);
-        // }
-
-        // public void RemoveEvenetListener(EEventId eventId, Action<CEventData> action)
-        // {
-        //     CEventSystem.Instance.RemoveEventListener(eventId, action);
-        // }
-
         public void Broadcast(EEventId eventId, in CEventData data)
         {
-            CEventSystem.Instance.Broadcast(eventId, data);
+            m_eventSystem.Broadcast(eventId, data);
         }
     }
 }
