@@ -1,9 +1,8 @@
 using System;
 using UnityEngine;
 
-namespace Xuf.UI
+namespace Xuf.Common
 {
-
     /// <summary>
     /// Abstract base class for all event arguments.
     /// </summary>
@@ -12,6 +11,12 @@ namespace Xuf.UI
     {
         // Base class for event arguments. No members are required here.
     }
+}
+
+namespace Xuf.UI
+{
+
+
 
     /// <summary>
     /// Integer event argument.
