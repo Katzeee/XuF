@@ -1,5 +1,6 @@
 using System;
 using UnityEngine;
+using Xuf.Common;
 
 namespace Xuf.Common
 {
