@@ -8,6 +8,7 @@ namespace Xuf.Core
     class CSystemManager : CSingleton<CSystemManager>
     {
         private List<IGameSystem> m_systems = new List<IGameSystem>();
+        private HashSet<IGameSystem> m_disabledSystems = new HashSet<IGameSystem>();
 
         /// <summary>
         /// Register a game system with priority-based ordering
@@ -39,6 +40,9 @@ namespace Xuf.Core
             }
 
             m_systems.Insert(insertIndex, system);
+
+            // Call OnEnable when system is registered
+            system.OnEnable();
         }
 
         /// <summary>
@@ -57,7 +61,11 @@ namespace Xuf.Core
                 throw new System.InvalidOperationException($"System {system.GetType().Name} is not registered");
             }
 
+            // Call OnDisable before unregistering
+            system.OnDisable();
+
             m_systems.Remove(system);
+            m_disabledSystems.Remove(system); // Remove from disabled set if it was there
         }
 
         /// <summary>
@@ -74,6 +82,104 @@ namespace Xuf.Core
         }
 
         /// <summary>
+        /// Enable a system (call OnEnable)
+        /// </summary>
+        /// <param name="system">The system to enable</param>
+        public void EnableSystem(IGameSystem system)
+        {
+            if (system == null)
+            {
+                throw new System.ArgumentNullException(nameof(system), "System cannot be null");
+            }
+
+            if (!m_systems.Contains(system))
+            {
+                throw new System.InvalidOperationException($"System {system.GetType().Name} is not registered");
+            }
+
+            if (m_disabledSystems.Contains(system))
+            {
+                m_disabledSystems.Remove(system);
+                system.OnEnable();
+            }
+        }
+
+        /// <summary>
+        /// Enable a system by type
+        /// </summary>
+        /// <typeparam name="T">The system type</typeparam>
+        public void EnableSystem<T>() where T : IGameSystem
+        {
+            var system = m_systems.OfType<T>().FirstOrDefault();
+            if (system != null)
+            {
+                EnableSystem(system);
+            }
+        }
+
+        /// <summary>
+        /// Disable a system (call OnDisable)
+        /// </summary>
+        /// <param name="system">The system to disable</param>
+        public void DisableSystem(IGameSystem system)
+        {
+            if (system == null)
+            {
+                throw new System.ArgumentNullException(nameof(system), "System cannot be null");
+            }
+
+            if (!m_systems.Contains(system))
+            {
+                throw new System.InvalidOperationException($"System {system.GetType().Name} is not registered");
+            }
+
+            if (!m_disabledSystems.Contains(system))
+            {
+                m_disabledSystems.Add(system);
+                system.OnDisable();
+            }
+        }
+
+        /// <summary>
+        /// Disable a system by type
+        /// </summary>
+        /// <typeparam name="T">The system type</typeparam>
+        public void DisableSystem<T>() where T : IGameSystem
+        {
+            var system = m_systems.OfType<T>().FirstOrDefault();
+            if (system != null)
+            {
+                DisableSystem(system);
+            }
+        }
+
+        /// <summary>
+        /// Check if a system is enabled
+        /// </summary>
+        /// <param name="system">The system to check</param>
+        /// <returns>True if system is enabled, false otherwise</returns>
+        public bool IsSystemEnabled(IGameSystem system)
+        {
+            if (system == null)
+            {
+                return false;
+            }
+
+            return m_systems.Contains(system) && !m_disabledSystems.Contains(system);
+        }
+
+        /// <summary>
+        /// Check if a system of specified type is enabled
+        /// </summary>
+        /// <typeparam name="T">The system type</typeparam>
+        /// <returns>True if system is enabled, false otherwise</returns>
+        public bool IsSystemEnabled<T>() where T : IGameSystem
+        {
+            var system = m_systems.OfType<T>().FirstOrDefault();
+            return system != null && IsSystemEnabled(system);
+        }
+
+        /// <summary>
         /// Update all registered systems
         /// </summary>
         /// <param name="deltaTime">Frame time</param>
@@ -82,7 +188,11 @@ namespace Xuf.Core
         {
             foreach (var system in m_systems)
             {
-                system.Update(deltaTime, unscaledDeltaTime);
+                // Only update enabled systems
+                if (!m_disabledSystems.Contains(system))
+                {
+                    system.Update(deltaTime, unscaledDeltaTime);
+                }
             }
         }
 
@@ -125,17 +235,48 @@ namespace Xuf.Core
         }
 
         /// <summary>
+        /// Get all enabled systems
+        /// </summary>
+        /// <returns>A list of enabled systems</returns>
+        public List<IGameSystem> GetEnabledSystems()
+        {
+            return m_systems.Where(system => !m_disabledSystems.Contains(system)).ToList();
+        }
+
+        /// <summary>
+        /// Get all disabled systems
+        /// </summary>
+        /// <returns>A list of disabled systems</returns>
+        public List<IGameSystem> GetDisabledSystems()
+        {
+            return m_disabledSystems.ToList();
+        }
+
+        /// <summary>
         /// Get the count of registered systems
         /// </summary>
         /// <returns>The number of registered systems</returns>
         public int Count => m_systems.Count;
 
         /// <summary>
+        /// Get the count of enabled systems
+        /// </summary>
+        /// <returns>The number of enabled systems</returns>
+        public int EnabledCount => m_systems.Count - m_disabledSystems.Count;
+
+        /// <summary>
         /// Clear all registered systems
         /// </summary>
         public void ClearAllSystems()
         {
+            // Call OnDisable for all systems before clearing
+            foreach (var system in m_systems)
+            {
+                system.OnDisable();
+            }
+
             m_systems.Clear();
+            m_disabledSystems.Clear();
         }
 
         /// <summary>
@@ -144,11 +285,12 @@ namespace Xuf.Core
         /// <returns>Debug information string</returns>
         public string GetDebugInfo()
         {
-            var info = $"SystemManager Debug Info:\nTotal Systems: {m_systems.Count}\n";
+            var info = $"SystemManager Debug Info:\nTotal Systems: {m_systems.Count}\nEnabled Systems: {EnabledCount}\nDisabled Systems: {m_disabledSystems.Count}\n";
             for (int i = 0; i < m_systems.Count; i++)
             {
                 var system = m_systems[i];
-                info += $"[{i}] {system.GetType().Name} (Priority: {system.Priority})\n";
+                var status = m_disabledSystems.Contains(system) ? "[DISABLED]" : "[ENABLED]";
+                info += $"[{i}] {system.GetType().Name} (Priority: {system.Priority}) {status}\n";
             }
             return info;
         }
