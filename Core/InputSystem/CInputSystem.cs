@@ -1,5 +1,6 @@
 using UnityEngine.InputSystem;
 using UnityEngine;
+using System.Collections.Generic;
 
 namespace Xuf.Core
 {
@@ -10,6 +11,8 @@ namespace Xuf.Core
         InputAction move;
 
         InputAction joinGame;
+        // Track devices that have already joined to prevent duplicate player creation
+        private HashSet<InputDevice> _joinedDevices = new HashSet<InputDevice>();
 
 
         public CInputSystem()
@@ -24,29 +27,30 @@ namespace Xuf.Core
 
         public void Update(float deltaTime, float unscaledDeltaTime)
         {
-            if (move.IsPressed())
-            {
-                Debug.Log(move.ReadValue<Vector2>() * 10);
-            }
-
-
+            // if (move.IsPressed())
+            // {
+            //     Debug.Log(move.ReadValue<Vector2>() * 10);
+            // }
         }
 
         private void OnJoinGamePerformed(InputAction.CallbackContext context)
         {
-            Debug.Log($"JoinGame: {context.control.device}");
+            Debug.Log($"OnJoinGamePerformed: {context.control.device}");
+            var device = context.control.device;
+            // Check if the device has already joined
+            if (_joinedDevices.Contains(device))
+            {
+                Debug.Log($"Device {device.displayName} has already joined. Ignoring this request.");
+                return;
+            }
+            _joinedDevices.Add(device);
 
+            Debug.Log($"JoinGame: {device}");
 
             var player = Resources.Load<GameObject>("Prefabs/Player/Cube");
-            var playerInstance = PlayerInput.Instantiate(player, pairWithDevice: context.control.device);
-            // var playerInput = playerInstance.AddComponent<PlayerInput>();
-            // playerInput.actions = InputSystem.actions;
-
+            // Instantiate player and pair with the current device
+            var playerInstance = PlayerInput.Instantiate(player, pairWithDevice: device);
             playerInstance.transform.position = new Vector3(0, 0, 0);
-
-            // playerInput.user.UnpairDevicesAndRemoveUser();
-            // playerInput.user.AssociateActionsWithUser(playerInput.actions);
-            // playerInput.user.p
         }
     }
 }
