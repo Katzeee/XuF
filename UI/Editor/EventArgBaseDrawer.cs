@@ -2,7 +2,7 @@ using UnityEditor;
 using UnityEngine;
 using System;
 using System.Linq;
-using Xuf.UI;
+using Xuf.Common;
 
 [CustomPropertyDrawer(typeof(EventArgBase), true)]
 public class EventArgBaseDrawer : PropertyDrawer

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
+using Xuf.Common;
 using Xuf.Core;
 
 namespace Xuf.UI

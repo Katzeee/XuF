@@ -3,6 +3,7 @@ using UnityEngine;
 using System;
 using System.Linq;
 using Xuf.UI;
+using Xuf.Common;
 
 [CustomEditor(typeof(CUIEventEmitter))]
 public class UIEventEmitterEditor : Editor
