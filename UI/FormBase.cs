@@ -21,7 +21,7 @@ namespace Xuf.UI
         abstract public void OnActivate();
         abstract public void OnDeActivate();
 
-        protected CEventSystem m_eventSystem = CSystemManager.Instance.GetSystem<CEventSystem>();
+        protected CEventSystem m_eventSystem = CSystemManager.Instance.GetSystem<CEventSystem>(throwException: false);
 
         public void Broadcast(EEventId eventId, CEventData data)
         {
