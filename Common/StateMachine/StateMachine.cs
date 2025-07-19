@@ -10,6 +10,7 @@ namespace Xuf.Common
         public virtual void OnEnter() { }
         public virtual void OnExit() { }
         public virtual void OnUpdate() { }
+        public virtual void OnFixedUpdate() { }
     }
 
     public class CStateMachine
@@ -60,6 +61,11 @@ namespace Xuf.Common
         public void OnUpdate()
         {
             m_currentState?.OnUpdate();
+        }
+
+        public void OnFixedUpdate()
+        {
+            m_currentState?.OnFixedUpdate();
         }
     }
 }
