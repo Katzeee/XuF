@@ -4,26 +4,25 @@ using UnityEngine;
 
 namespace Xuf.Common
 {
-    public abstract class CStateBase : IState
+    public class CStateBase : IState
     {
         public CStateMachine stateMachine { get; internal set; }
-        public abstract void OnEnter();
-        public abstract void OnExit();
-        public abstract void OnUpdate();
+        public virtual void OnEnter() { }
+        public virtual void OnExit() { }
+        public virtual void OnUpdate() { }
     }
 
     public class CStateMachine
     {
         public delegate CStateBase CreateWrapper(object param);
         private Dictionary<Type, CreateWrapper> m_allStates = new();
-        private Stack<CStateBase> m_stateStack = new();
-        public CStateBase CurState { get { return m_stateStack.Peek(); } }
+        private CStateBase m_currentState;
+        public CStateBase CurState { get { return m_currentState; } }
 
         public void RegisterState<T>(CreateWrapper creator)
         {
             m_allStates.TryAdd(typeof(T), creator);
         }
-
 
         // For every state changing, you should directly new a new state object,
         // because state is with state, it has its internal infomation
@@ -35,34 +34,32 @@ namespace Xuf.Common
                 Debug.LogWarning($"{type} has not been registered");
                 return;
             }
-            var state = m_allStates[type](param);
-            state.stateMachine = this;
-            if (m_stateStack.Count > 0)
-            {
-                m_stateStack.Peek().OnExit();
-            }
-            state.OnEnter();
-            m_stateStack.Push(state);
-        }
 
-        public void Exit()
-        {
-            if (m_stateStack.Count == 0)
+            // Exit current state
+            if (m_currentState != null)
             {
-                return;
+                m_currentState.OnExit();
             }
-            m_stateStack.Pop().OnExit();
-            m_stateStack.Peek()?.OnEnter();
+
+            // Create and enter new state
+            var newState = m_allStates[type](param);
+            newState.stateMachine = this;
+            newState.OnEnter();
+            m_currentState = newState;
         }
 
         public void Clear()
         {
-            m_stateStack.Clear();
+            if (m_currentState != null)
+            {
+                m_currentState.OnExit();
+                m_currentState = null;
+            }
         }
 
         public void OnUpdate()
         {
-            m_stateStack.Peek()?.OnUpdate();
+            m_currentState?.OnUpdate();
         }
     }
 }

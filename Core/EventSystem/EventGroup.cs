@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 
 namespace Xuf.Core
 {
@@ -12,16 +13,21 @@ namespace Xuf.Core
         public bool m_isEnable = true;
         public EEventId m_eventOrGroup = EEventId.None;
         public EventGroup m_parent;
-        private Func<CEventData, bool> handler;
+
+        /// <summary>
+        /// The handler of the event.
+        /// <see langword="return"/> true to intercept the event, false to pass the event to the parent.
+        /// </summary>
+        private Func<CEventData, bool> m_handler;
 
         public void AddEventListener(Func<CEventData, bool> handler)
         {
-            this.handler += handler;
+            m_handler += handler;
         }
 
         public void RemoveEventListener(Func<CEventData, bool> handler)
         {
-            this.handler -= handler;
+            m_handler -= handler;
         }
 
         public void Broadcast(in CEventData @event)
@@ -30,15 +36,14 @@ namespace Xuf.Core
             {
                 return;
             }
-            bool intercepted = false;
-            if (handler != null)
+            var intercepted = false;
+            if (m_handler != null)
             {
-                foreach (Func<CEventData, bool> singleHandler in handler.GetInvocationList())
+                foreach (Func<CEventData, bool> singleHandler in m_handler.GetInvocationList().Cast<Func<CEventData, bool>>())
                 {
                     if (singleHandler(@event))
                     {
                         intercepted = true;
-                        break;
                     }
                 }
             }
