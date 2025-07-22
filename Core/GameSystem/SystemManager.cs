@@ -196,6 +196,18 @@ namespace Xuf.Core
             }
         }
 
+        public void FixedUpdate(float deltaTime, float unscaledDeltaTime)
+        {
+            foreach (var system in m_systems)
+            {
+                // Only update enabled systems
+                if (!m_disabledSystems.Contains(system))
+                {
+                    system.FixedUpdate(deltaTime, unscaledDeltaTime);
+                }
+            }
+        }
+
         /// <summary>
         /// Get a system of specified type, throws exception if not found
         /// </summary>
