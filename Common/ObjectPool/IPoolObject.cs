@@ -13,9 +13,16 @@ namespace XuF.Common.ObjectPool
         void OnSpawn();
         
         /// <summary>
-        /// Reset object to initial state, releasing all resources
-        /// Object should become an empty shell after reset
+        /// Reset object to initial state for reuse
+        /// Should restore the object to a clean, reusable state
         /// </summary>
         void Reset();
+
+        /// <summary>
+        /// Release all resources held by this object
+        /// Called when object is permanently discarded from pool
+        /// Should clean up event listeners, references, etc.
+        /// </summary>
+        void ReleaseResources();
     }
 } 

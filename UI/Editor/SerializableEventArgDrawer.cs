@@ -1,6 +1,6 @@
 using UnityEditor;
 using UnityEngine;
-using Xuf.UI;
+using Xuf.Common;      
 
 [CustomPropertyDrawer(typeof(IntEventArg))]
 public class IntEventArgDrawer : PropertyDrawer

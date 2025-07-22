@@ -100,15 +100,15 @@ namespace XuF.Common.ObjectPool
             // Check pool size limit
             if (maxSize > 0 && pool.Count >= maxSize)
             {
-                // Pool is full, just return without adding to pool
+                // Pool is full, release object resources and discard
+                obj.ReleaseResources();
                 TotalCount--;
+                Debug.LogWarning($"[{poolName}] Pool is full, object discarded. {GetStats()}");
                 return;
             }
 
-            // Call object's Reset method
+            // Reset object state for reuse and add to pool
             obj.Reset();
-
-            // Add to pool
             pool.Push(obj);
         }
 
@@ -138,7 +138,13 @@ namespace XuF.Common.ObjectPool
         /// </summary>
         public void Clear()
         {
-            pool.Clear();
+            // Release resources for all objects in pool
+            while (pool.Count > 0)
+            {
+                var obj = pool.Pop();
+                obj.ReleaseResources();
+            }
+            
             TotalCount = 0;
         }
 
