@@ -1,12 +1,13 @@
 using System.Collections.Generic;
 using System.Linq;
-using UnityEngine.Android;
+using UnityEngine;
 using Xuf.Common;
 
 namespace Xuf.Core
 {
-    class CSystemManager : CSingleton<CSystemManager>
+    public class CSystemManager : CSingleton<CSystemManager>
     {
+        public Transform Root { get; set; }
         private List<IGameSystem> m_systems = new List<IGameSystem>();
         private HashSet<IGameSystem> m_disabledSystems = new HashSet<IGameSystem>();
 
