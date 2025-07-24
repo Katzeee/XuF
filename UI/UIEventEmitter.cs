@@ -93,9 +93,20 @@ namespace Xuf.UI
                 if (config.eventType == type)
                 {
                     var arg = eventArg ?? config.eventArg ?? new CTransformEventArg { value = from };
-                    m_eventSystem.Publish(config.eventId, arg);
+                    PublishWithGenericType(config.eventId, arg);
                 }
             }
+        }
+
+        // Helper method to publish with correct generic type
+        private void PublishWithGenericType(EEventId eventId, CEventArgBase arg)
+        {
+            var argType = arg.GetType();
+
+            // Use reflection to call the generic Publish method with the correct type
+            var method = typeof(CEventSystem).GetMethod("Publish");
+            var genericMethod = method.MakeGenericMethod(argType);
+            genericMethod.Invoke(m_eventSystem, new object[] { eventId, arg });
         }
 
         public void OnPointerClick(PointerEventData data)
@@ -187,7 +198,7 @@ namespace Xuf.UI
                     return;
                 }
             }
-            m_eventSystem.Publish(@event, new CTransformEventArg { value = transform });
+            m_eventSystem.Publish<CTransformEventArg>(@event, new CTransformEventArg { value = transform });
         }
     }
 
