@@ -106,7 +106,7 @@ namespace Xuf.UI
             // Use reflection to call the generic Publish method with the correct type
             var method = typeof(CEventSystem).GetMethod("Publish");
             var genericMethod = method.MakeGenericMethod(argType);
-            genericMethod.Invoke(m_eventSystem, new object[] { eventId, arg });
+            genericMethod.Invoke(m_eventSystem, new object[] { eventId, arg, EventExecutionMode.Smart });
         }
 
         public void OnPointerClick(PointerEventData data)

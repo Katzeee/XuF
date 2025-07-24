@@ -4,13 +4,40 @@ using UnityEngine;
 
 namespace Xuf.Core
 {
+    public enum EventExecutionMode
+    {
+        Immediate,    // Always execute immediately
+        Queued,       // Always add to queue
+        Smart         // Use frame budget to decide
+    }
+
+    internal struct QueuedEvent
+    {
+        public EEventId eventId;
+        public CEventArgBase eventArg;
+        public float timestamp;
+    }
+
     public class CEventSystem : IGameSystem
     {
         private Dictionary<EEventId, Delegate> m_eventHandlers = new();
+        private Queue<QueuedEvent> m_eventQueue = new();
+        private float m_frameStartTime;
+        private int m_eventsProcessedThisFrame;
+
+        // Configuration fields
+        public float maxProcessingTimePerFrame = 2.0f; // milliseconds
+        public int maxEventsPerFrame = 15;
 
         public int Priority => 900;
 
-        public void Update(float deltaTime, float unscaledDeltaTime) { }
+        public void Update(float deltaTime, float unscaledDeltaTime)
+        {
+            m_frameStartTime = Time.realtimeSinceStartup * 1000f;
+            m_eventsProcessedThisFrame = 0;
+
+            ProcessEventQueue();
+        }
 
         // Type-safe subscription
         // https://stackoverflow.com/questions/6229131/why-cant-c-sharp-infer-type-from-this-seemingly-simple-obvious-case
@@ -51,25 +78,100 @@ namespace Xuf.Core
             }
         }
 
-        // Type-safe publish
-        public void Publish<T>(EEventId eventId, T data) where T : CEventArgBase
+        public void Publish<T>(EEventId eventId, T data, EventExecutionMode mode = EventExecutionMode.Smart) where T : CEventArgBase
+        {
+            switch (mode)
+            {
+                case EventExecutionMode.Immediate:
+                    ExecuteEventImmediate(eventId, data);
+                    break;
+
+                case EventExecutionMode.Queued:
+                    AddToQueue(eventId, data);
+                    break;
+
+                case EventExecutionMode.Smart:
+                    if (HasFrameBudget())
+                    {
+                        ExecuteEventImmediate(eventId, data);
+                    }
+                    else
+                    {
+                        AddToQueue(eventId, data);
+                    }
+                    break;
+            }
+        }
+
+        public void PublishNow<T>(EEventId eventId, T data) where T : CEventArgBase
+        {
+            ExecuteEventImmediate(eventId, data);
+        }
+
+        private void ExecuteEventImmediate<T>(EEventId eventId, T data) where T : CEventArgBase
         {
             if (m_eventHandlers.TryGetValue(eventId, out var handler))
             {
                 if (handler is Action<T> action)
                 {
                     action(data);
+                    m_eventsProcessedThisFrame++;
                 }
                 else
                 {
-                    // Get the expected type from the delegate
-                    var expectedType = handler.Method.GetParameters().Length > 0 
-                        ? handler.Method.GetParameters()[0].ParameterType.Name 
+                    var expectedType = handler.Method.GetParameters().Length > 0
+                        ? handler.Method.GetParameters()[0].ParameterType.Name
                         : "Unknown";
                     Debug.LogError($"[EventSystem] Type mismatch when publishing event {eventId}. Expected: {expectedType}, Got: {typeof(T).Name}");
                 }
             }
         }
+
+        private void AddToQueue<T>(EEventId eventId, T data) where T : CEventArgBase
+        {
+            var queuedEvent = new QueuedEvent
+            {
+                eventId = eventId,
+                eventArg = data,
+                timestamp = Time.time
+            };
+
+            m_eventQueue.Enqueue(queuedEvent);
+        }
+
+        private bool HasFrameBudget()
+        {
+            var currentTime = Time.realtimeSinceStartup * 1000f;
+            var timeUsed = currentTime - m_frameStartTime;
+
+            return timeUsed < maxProcessingTimePerFrame &&
+                   m_eventsProcessedThisFrame < maxEventsPerFrame;
+        }
+
+        private void ProcessEventQueue()
+        {
+            while (m_eventQueue.Count > 0 && HasFrameBudget())
+            {
+                var queuedEvent = m_eventQueue.Dequeue();
+
+                if (m_eventHandlers.TryGetValue(queuedEvent.eventId, out var handler))
+                {
+                    try
+                    {
+                        handler.DynamicInvoke(queuedEvent.eventArg);
+                        m_eventsProcessedThisFrame++;
+                    }
+                    catch (Exception e)
+                    {
+                        Debug.LogError($"[EventSystem] Error executing queued event {queuedEvent.eventId}: {e.Message}");
+                    }
+                }
+            }
+        }
+
+        // Debug properties
+        public int QueuedEventCount => m_eventQueue.Count;
+        public int EventsProcessedThisFrame => m_eventsProcessedThisFrame;
     }
 }
 
