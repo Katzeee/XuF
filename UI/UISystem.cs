@@ -100,10 +100,13 @@ namespace Xuf.UI
                 RegisterUIForm<TForm>();
             }
             UIForm[type].SetActive(true);
-            UIForm[type].GetComponent<TForm>().OnActivate();
-
-            var eventData = new CEventData();
-            m_eventSystem.Broadcast($"{type.Name}_FormOpen", eventData);
+            var form = UIForm[type].GetComponent<TForm>();
+            form.OnActivate();
+            // Publish open event using the UIPrefab attribute
+            var attr = (UIPrefab) Attribute.GetCustomAttribute(type, typeof(UIPrefab));
+            if (attr == null)
+                throw new Exception($"UIPrefab attribute not found on {type.Name}");
+            m_eventSystem.Publish(attr.OpenEventId, new CTransformEventArg { value = UIForm[type].transform });
         }
 
         public void CloseForm<TForm>() where TForm : FormBase
@@ -114,11 +117,14 @@ namespace Xuf.UI
                 Debug.LogError($"No UIForm named {type}");
                 return;
             }
-            UIForm[type].GetComponent<TForm>().OnDeActivate();
+            var form = UIForm[type].GetComponent<TForm>();
+            form.OnDeActivate();
             UIForm[type].SetActive(false);
-
-            var eventData = new CEventData();
-            m_eventSystem.Broadcast($"{type.Name}_FormClose", eventData);
+            // Publish close event using the UIPrefab attribute
+            var attr = (UIPrefab) Attribute.GetCustomAttribute(type, typeof(UIPrefab));
+            if (attr == null)
+                throw new Exception($"UIPrefab attribute not found on {type.Name}");
+            m_eventSystem.Publish(attr.CloseEventId, new CTransformEventArg { value = UIForm[type].transform });
         }
 
         public void ToggleForm<TForm>()
@@ -130,11 +136,6 @@ namespace Xuf.UI
                 return;
             }
             UIForm[type].SetActive(!UIForm[type].activeSelf);
-        }
-
-        public void Broadcast(EEventId eventId, in CEventData data)
-        {
-            m_eventSystem.Broadcast(eventId, data);
         }
     }
 }

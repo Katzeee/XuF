@@ -17,7 +17,7 @@ namespace Xuf.UI
         ISubmitHandler, ICancelHandler
     {
         // List of all UI event configs
-        public List<CUIEventConfig> eventConfigs = new List<CUIEventConfig>();
+        public List<CUIEventConfig> eventConfigs = new();
 
         // Cache the event system reference for better performance
         private CEventSystem m_eventSystem;
@@ -76,9 +76,8 @@ namespace Xuf.UI
         }
 
         // Helper: Broadcast event by type
-        private void BroadcastByType(EUIEventType type, Transform from, object customData = null)
+        private void BroadcastByType(EUIEventType type, Transform from, CEventArgBase eventArg = null)
         {
-            // Check if event system reference is valid
             if (m_eventSystem == null)
             {
                 m_eventSystem = CSystemManager.Instance.GetSystem<CEventSystem>();
@@ -93,12 +92,8 @@ namespace Xuf.UI
             {
                 if (config.eventType == type)
                 {
-                    var eventData = new CEventData()
-                    {
-                        from = from,
-                        CustomData = customData ?? config.eventArg,
-                    };
-                    m_eventSystem.Broadcast(config.eventId, eventData);
+                    var arg = eventArg ?? config.eventArg ?? new CTransformEventArg { value = from };
+                    m_eventSystem.Publish(config.eventId, arg);
                 }
             }
         }
@@ -159,31 +154,30 @@ namespace Xuf.UI
         // Handler for Slider.onValueChanged
         private void OnSliderValueChanged(float value)
         {
-            BroadcastByType(EUIEventType.SliderValueChanged, transform, new FloatEventArg() { value = value });
+            BroadcastByType(EUIEventType.SliderValueChanged, transform, new CTransformFloatEventArg { transform = transform, floatValue = value });
         }
 
         // Handler for Toggle.onValueChanged
         private void OnToggleValueChanged(bool value)
         {
-            BroadcastByType(EUIEventType.ToggleValueChanged, transform, new BoolEventArg() { value = value });
+            BroadcastByType(EUIEventType.ToggleValueChanged, transform, new CTransformBoolEventArg { transform = transform, boolValue = value });
         }
 
         // Handler for InputField.onValueChanged
         private void OnInputFieldValueChanged(string value)
         {
-            BroadcastByType(EUIEventType.InputFieldValueChanged, transform, new StringEventArg() { value = value });
+            BroadcastByType(EUIEventType.InputFieldValueChanged, transform, new CTransformStringEventArg { transform = transform, stringValue = value });
         }
 
         // Handler for InputField.onEndEdit
         private void OnInputFieldEndEdit(string value)
         {
-            BroadcastByType(EUIEventType.InputFieldEndEdit, transform, new StringEventArg() { value = value });
+            BroadcastByType(EUIEventType.InputFieldEndEdit, transform, new CTransformStringEventArg { transform = transform, stringValue = value });
         }
 
         // For Animation Broadcast
         public void Broadcast(EEventId @event)
         {
-            // Check if event system reference is valid
             if (m_eventSystem == null)
             {
                 m_eventSystem = CSystemManager.Instance.GetSystem<CEventSystem>();
@@ -193,12 +187,7 @@ namespace Xuf.UI
                     return;
                 }
             }
-
-            var eventData = new CEventData()
-            {
-                from = transform,
-            };
-            m_eventSystem.Broadcast(@event, eventData);
+            m_eventSystem.Publish(@event, new CTransformEventArg { value = transform });
         }
     }
 
@@ -230,8 +219,8 @@ namespace Xuf.UI
     public class CUIEventConfig
     {
         public EUIEventType eventType;
-        public EEventId eventId;
+        public EEventId eventId = EEventId.None;
         [SerializeReference]
-        public EventArgBase eventArg;
+        public CEventArgBase eventArg;
     }
 }

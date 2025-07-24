@@ -1,18 +1,26 @@
 using System;
 using UnityEngine.EventSystems;
 using Xuf.Core;
+using System.Reflection;
 
 namespace Xuf.UI
 {
+    /// <summary>
+    /// Attribute for marking FormBase subclasses with prefab path and open/close event ids.
+    /// </summary>
     [AttributeUsage(AttributeTargets.Class | AttributeTargets.Constructor |
         AttributeTargets.Field | AttributeTargets.Method |
         AttributeTargets.Property)]
     public class UIPrefab : Attribute
     {
         public string path;
-        public UIPrefab(string path)
+        public EEventId OpenEventId { get; }
+        public EEventId CloseEventId { get; }
+        public UIPrefab(string path, EEventId openEventId, EEventId closeEventId)
         {
             this.path = path;
+            OpenEventId = openEventId;
+            CloseEventId = closeEventId;
         }
     }
 
@@ -22,10 +30,5 @@ namespace Xuf.UI
         abstract public void OnDeActivate();
 
         protected CEventSystem m_eventSystem = CSystemManager.Instance.GetSystem<CEventSystem>(throwException: false);
-
-        public void Broadcast(EEventId eventId, CEventData data)
-        {
-            m_eventSystem.Broadcast(eventId, data);
-        }
     }
 }

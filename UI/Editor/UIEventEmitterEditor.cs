@@ -3,7 +3,7 @@ using UnityEngine;
 using System;
 using System.Linq;
 using Xuf.UI;
-using Xuf.Common;
+using Xuf.Core;
 
 [CustomEditor(typeof(CUIEventEmitter))]
 public class UIEventEmitterEditor : Editor
@@ -14,14 +14,14 @@ public class UIEventEmitterEditor : Editor
     private Type[] argTypes;
     private string[] argTypeNames;
 
-    private const float LABEL_WIDTH = 120f;
+    private const float LABEL_WIDTH = 200f;
     private const float TYPE_WIDTH = 150f;
 
     private void OnEnable()
     {
         eventConfigsProp = serializedObject.FindProperty("eventConfigs");
 
-        var baseType = typeof(EventArgBase);
+        var baseType = typeof(CEventArgBase);
         argTypes = AppDomain.CurrentDomain.GetAssemblies()
             .SelectMany(a => a.GetTypes())
             .Where(t => baseType.IsAssignableFrom(t) && !t.IsAbstract && !t.IsGenericType)
@@ -99,42 +99,41 @@ public class UIEventEmitterEditor : Editor
 
                 // Consistent spacing before Event Arg line
                 GUILayout.Space(EditorGUIUtility.standardVerticalSpacing);
-                EditorGUILayout.BeginHorizontal();
-                // Type dropdown
-                EditorGUILayout.LabelField("Event Arg");
-                int currentIndex = 0; // 0 means None
-                if (eventArgProp.managedReferenceValue != null)
+                // --- Event Arg foldout ---
+                eventArgProp.isExpanded = EditorGUILayout.Foldout(eventArgProp.isExpanded, "Event Arg", true);
+                if (eventArgProp.isExpanded)
                 {
-                    var currentType = eventArgProp.managedReferenceValue.GetType();
-                    int found = Array.FindIndex(argTypes, t => t == currentType);
-                    if (found >= 0) currentIndex = found + 1;
-                }
-                int newIndex = EditorGUILayout.Popup(currentIndex, argTypeNames, GUILayout.Width(TYPE_WIDTH));
-                // If type changed
-                if (newIndex != currentIndex)
-                {
-                    if (newIndex == 0)
-                        eventArgProp.managedReferenceValue = null;
-                    else
-                        eventArgProp.managedReferenceValue = Activator.CreateInstance(argTypes[newIndex - 1]);
-                }
-                // Value field on the same line (if not null)
-                if (eventArgProp.managedReferenceValue != null && eventArgProp.hasVisibleChildren)
-                {
-                    var iterator = eventArgProp.Copy();
-                    var end = iterator.GetEndProperty();
-                    bool enterChildren = true;
-                    while (iterator.NextVisible(enterChildren) && !SerializedProperty.EqualContents(iterator, end))
+                    // Increase indent level for Event Arg content
+                    EditorGUI.indentLevel++;
+
+                    // --- Type dropdown with proper label ---
+                    int currentIndex = 0; // 0 means None
+                    if (eventArgProp.managedReferenceValue != null)
                     {
-                        if (iterator.name == "value")
-                        {
-                            EditorGUILayout.PropertyField(iterator, GUIContent.none, true);
-                            break;
-                        }
-                        enterChildren = false;
+                        var currentType = eventArgProp.managedReferenceValue.GetType();
+                        int found = Array.FindIndex(argTypes, t => t == currentType);
+                        if (found >= 0) currentIndex = found + 1;
                     }
+
+                    int newIndex = EditorGUILayout.Popup("Type", currentIndex, argTypeNames);
+                    if (newIndex != currentIndex)
+                    {
+                        if (newIndex == 0)
+                            eventArgProp.managedReferenceValue = null;
+                        else
+                            eventArgProp.managedReferenceValue = Activator.CreateInstance(argTypes[newIndex - 1]);
+                    }
+
+                    // --- Value field with proper indentation ---
+                    if (eventArgProp.managedReferenceValue != null)
+                    {
+                        GUILayout.Space(EditorGUIUtility.standardVerticalSpacing);
+                        EditorGUILayout.PropertyField(eventArgProp, new GUIContent("Value"), true);
+                    }
+
+                    // Restore indent level
+                    EditorGUI.indentLevel--;
                 }
-                EditorGUILayout.EndHorizontal();
                 // Restore original label width
                 EditorGUIUtility.labelWidth = originalLabelWidth;
                 EditorGUILayout.EndVertical();
