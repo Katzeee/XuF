@@ -24,10 +24,14 @@ namespace Xuf.UI
         }
     }
 
-    public abstract class FormBase : UIBehaviour
+    public abstract class FormBase<T> : UIBehaviour
     {
-        abstract public void OnActivate();
-        abstract public void OnDeActivate();
+        public T m_data;
+
+        public abstract void OnActivate();
+        public abstract void OnDeActivate();
+
+        public abstract void Refresh(T data);
 
         protected CEventSystem m_eventSystem = CSystemManager.Instance.GetSystem<CEventSystem>(throwException: false);
     }

@@ -53,7 +53,7 @@ namespace Xuf.UI
             set => _UIRoot = value;
         }
 
-        private void RegisterUIForm<TForm>() where TForm : FormBase
+        private void RegisterUIForm<TForm, TData>() where TForm : FormBase<TData>
         {
             Type type = typeof(TForm);
             var attrs = (UIPrefab) Attribute.GetCustomAttribute(type, typeof(UIPrefab));
@@ -92,15 +92,17 @@ namespace Xuf.UI
             }
         }
 
-        public void OpenForm<TForm>() where TForm : FormBase
+        public void OpenForm<TForm, TData>(TData data) where TForm : FormBase<TData>
         {
             Type type = typeof(TForm);
             if (!UIForm.ContainsKey(type))
             {
-                RegisterUIForm<TForm>();
+                RegisterUIForm<TForm, TData>();
             }
             UIForm[type].SetActive(true);
             var form = UIForm[type].GetComponent<TForm>();
+            form.m_data = data;
+            form.Refresh(data);
             form.OnActivate();
             // Publish open event using the UIPrefab attribute
             var attr = (UIPrefab) Attribute.GetCustomAttribute(type, typeof(UIPrefab));
@@ -109,7 +111,7 @@ namespace Xuf.UI
             m_eventSystem.Publish(attr.OpenEventId, new CTransformEventArg { value = UIForm[type].transform });
         }
 
-        public void CloseForm<TForm>() where TForm : FormBase
+        public void CloseForm<TForm, TData>() where TForm : FormBase<TData>
         {
             Type type = typeof(TForm);
             if (!UIForm.ContainsKey(type))
