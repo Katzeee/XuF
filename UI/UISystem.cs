@@ -99,11 +99,11 @@ namespace Xuf.UI
             {
                 RegisterUIForm<TForm, TData>();
             }
-            UIForm[type].SetActive(true);
             var form = UIForm[type].GetComponent<TForm>();
             form.m_data = data;
             form.Refresh(data);
             form.OnActivate();
+            UIForm[type].SetActive(true);
             // Publish open event using the UIPrefab attribute
             var attr = (UIPrefab) Attribute.GetCustomAttribute(type, typeof(UIPrefab));
             if (attr == null)
