@@ -53,62 +53,63 @@ namespace Xuf.UI
             set => _UIRoot = value;
         }
 
-        private void RegisterUIForm<TForm, TData>() where TForm : FormBase<TData>
+        private GameObject CreateUIForm<TForm, TData>() where TForm : FormBase<TData>
         {
             Type type = typeof(TForm);
             var attrs = (UIPrefab) Attribute.GetCustomAttribute(type, typeof(UIPrefab));
             if (attrs == null)
             {
                 Debug.LogError($"Can't get attribute \"UIPrefab\" from {type}");
-                return;
+                return null;
             }
             GameObject prefab = Resources.Load<GameObject>(attrs.path);
             if (prefab == null)
             {
                 Debug.LogError($"Can't load ui prefab at {attrs.path}");
-                return;
+                return null;
             }
             GameObject ui = GameObject.Instantiate(prefab, UIRoot);
-            if (!UIForm.TryAdd(type, ui))
-            {
-                Debug.LogWarning($"UIForm {type} has already be registered");
-                return;
-            }
             var Form = ui.GetComponent<TForm>();
             if (Form == null)
             {
                 Debug.LogWarning($"UIForm {type} has no FormBase attached.");
-                return;
+                GameObject.Destroy(ui);
+                return null;
             }
-            ui.SetActive(false);
-        }
-
-        public void RemoveUIForm<TForm>()
-        {
-            Type type = typeof(UIPrefab);
-            if (!UIForm.Remove(type))
-            {
-                Debug.LogWarning($"No registered UIForm named {type}");
-            }
+            return ui;
         }
 
         public void OpenForm<TForm, TData>(TData data) where TForm : FormBase<TData>
         {
             Type type = typeof(TForm);
-            if (!UIForm.ContainsKey(type))
+
+            // Close existing form of same type if open
+            if (UIForm.ContainsKey(type))
             {
-                RegisterUIForm<TForm, TData>();
+                CloseForm<TForm, TData>();
             }
-            var form = UIForm[type].GetComponent<TForm>();
+
+            // Create new form instance
+            GameObject ui = CreateUIForm<TForm, TData>();
+            if (ui == null) return;
+
+            UIForm[type] = ui;
+
+            var form = ui.GetComponent<TForm>();
+
+            // Set close callback for the form
+            form.CloseCallback = () => CloseForm<TForm, TData>();
+
             form.m_data = data;
             form.Refresh(data);
             form.OnActivate();
-            UIForm[type].SetActive(true);
+            ui.SetActive(true);
+
             // Publish open event using the UIPrefab attribute
             var attr = (UIPrefab) Attribute.GetCustomAttribute(type, typeof(UIPrefab));
             if (attr == null)
                 throw new Exception($"UIPrefab attribute not found on {type.Name}");
-            m_eventSystem.Publish(attr.OpenEventId, new CTransformEventArg { value = UIForm[type].transform });
+            m_eventSystem.Publish(attr.OpenEventId, new CTransformEventArg { value = ui.transform });
         }
 
         public void CloseForm<TForm, TData>() where TForm : FormBase<TData>
@@ -119,14 +120,19 @@ namespace Xuf.UI
                 Debug.LogError($"No UIForm named {type}");
                 return;
             }
-            var form = UIForm[type].GetComponent<TForm>();
+
+            GameObject ui = UIForm[type];
+            var form = ui.GetComponent<TForm>();
             form.OnDeActivate();
-            UIForm[type].SetActive(false);
+
             // Publish close event using the UIPrefab attribute
             var attr = (UIPrefab) Attribute.GetCustomAttribute(type, typeof(UIPrefab));
             if (attr == null)
                 throw new Exception($"UIPrefab attribute not found on {type.Name}");
-            m_eventSystem.Publish(attr.CloseEventId, new CTransformEventArg { value = UIForm[type].transform });
+            m_eventSystem.Publish(attr.CloseEventId, new CTransformEventArg { value = ui.transform });
+
+            UIForm.Remove(type);
+            GameObject.Destroy(ui);
         }
 
         public void ToggleForm<TForm>()

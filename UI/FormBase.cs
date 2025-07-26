@@ -1,4 +1,5 @@
 using System;
+using UnityEngine;
 using UnityEngine.EventSystems;
 using Xuf.Core;
 using System.Reflection;
@@ -34,5 +35,17 @@ namespace Xuf.UI
         public abstract void Refresh(T data);
 
         protected CEventSystem m_eventSystem = CSystemManager.Instance.GetSystem<CEventSystem>(throwException: false);
+
+        private Action m_closeCallback;
+        internal Action CloseCallback
+        {
+            get => m_closeCallback;
+            set => m_closeCallback = value;
+        }
+
+        protected void CloseForm()
+        {
+            m_closeCallback?.Invoke();
+        }
     }
 }
