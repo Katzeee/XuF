@@ -14,6 +14,20 @@ public class UIEventEmitterEditor : Editor
     private Type[] argTypes;
     private string[] argTypeNames;
 
+    // Define the types that should display content/be serialized
+    private static Type[] m_serializableTypes = new Type[]
+    {
+        typeof(CIntEventArg),
+        typeof(CFloatEventArg),
+        typeof(CStringEventArg),
+        typeof(CBoolEventArg),
+        typeof(CTransformEventArg),
+        typeof(CTransformIntEventArg),
+        typeof(CTransformFloatEventArg),
+        typeof(CTransformStringEventArg),
+        typeof(CTransformBoolEventArg)
+    };
+
     private const float LABEL_WIDTH = 200f;
     private const float TYPE_WIDTH = 150f;
 
@@ -125,10 +139,17 @@ public class UIEventEmitterEditor : Editor
                     }
 
                     // --- Value field with proper indentation ---
+                    // Only show content for serializable types
                     if (eventArgProp.managedReferenceValue != null)
                     {
-                        GUILayout.Space(EditorGUIUtility.standardVerticalSpacing);
-                        EditorGUILayout.PropertyField(eventArgProp, new GUIContent("Value"), true);
+                        var currentType = eventArgProp.managedReferenceValue.GetType();
+                        bool shouldShowContent = m_serializableTypes.Contains(currentType);
+
+                        if (shouldShowContent)
+                        {
+                            GUILayout.Space(EditorGUIUtility.standardVerticalSpacing);
+                            EditorGUILayout.PropertyField(eventArgProp, new GUIContent("Value"), true);
+                        }
                     }
 
                     // Restore indent level

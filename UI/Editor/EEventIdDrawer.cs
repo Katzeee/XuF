@@ -17,11 +17,25 @@ public class EEventIdDrawer : PropertyDrawer
         // Get all enum values
         var enumType = fieldInfo.FieldType;
         var enumNames = Enum.GetNames(enumType);
+        var enumValues = Enum.GetValues(enumType);
 
         // Build grouped menu
         var menu = new GenericMenu();
         int selectedIndex = -1;
-        string selectedPath = Enum.GetName(enumType, property.enumValueIndex);
+
+        // Get selected enum name by index (property.enumValueIndex is the index in the enum declaration)
+        string selectedPath = null;
+        if (property.enumValueIndex >= 0 && property.enumValueIndex < enumNames.Length)
+        {
+            selectedPath = enumNames[property.enumValueIndex];
+        }
+
+        // Handle null selectedPath case
+        if (string.IsNullOrEmpty(selectedPath))
+        {
+            selectedPath = enumNames.Length > 0 ? enumNames[0] : "None";
+            property.enumValueIndex = 0;
+        }
 
         for (int i = 0; i < enumNames.Length; i++)
         {
@@ -31,6 +45,7 @@ public class EEventIdDrawer : PropertyDrawer
 
             if (isSelected) selectedIndex = i;
 
+            // Pass the index i, not the enum value
             menu.AddItem(new GUIContent(path), isSelected, (userData) =>
             {
                 property.enumValueIndex = (int) userData;
@@ -39,7 +54,8 @@ public class EEventIdDrawer : PropertyDrawer
         }
 
         // Show dropdown button
-        if (EditorGUI.DropdownButton(dropdownRect, new GUIContent(selectedPath.Replace('_', '/')), FocusType.Keyboard))
+        string displayPath = string.IsNullOrEmpty(selectedPath) ? "None" : selectedPath.Replace('_', '/');
+        if (EditorGUI.DropdownButton(dropdownRect, new GUIContent(displayPath), FocusType.Keyboard))
         {
             menu.DropDown(dropdownRect);
         }
