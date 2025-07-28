@@ -61,6 +61,15 @@ namespace Xuf.Core
     }
 
     /// <summary>
+    /// GameObject event argument.
+    /// </summary>
+    [Serializable]
+    public class CGameObjectEventArg : CEventArgBase
+    {
+        public GameObject value;
+    }
+
+    /// <summary>
     /// Transform and int event argument.
     /// </summary>
     [Serializable]
