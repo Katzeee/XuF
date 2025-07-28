@@ -22,6 +22,8 @@ namespace Xuf.UI
             _UIRoot.SetParent(gameEntry);
         }
 
+        public string Name => "UISystem";
+
         Dictionary<Type, GameObject> UIForm = new();
         private Transform _UIRoot;
         private CEventSystem m_eventSystem = CSystemManager.Instance.GetSystem<CEventSystem>();

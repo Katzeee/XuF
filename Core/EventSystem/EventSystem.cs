@@ -20,6 +20,7 @@ namespace Xuf.Core
 
     public class CEventSystem : IGameSystem
     {
+        public string Name => "EventSystem";
         private Dictionary<EEventId, Delegate> m_eventHandlers = new();
         private Queue<QueuedEvent> m_eventQueue = new();
         private float m_frameStartTime;
