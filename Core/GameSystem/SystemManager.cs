@@ -229,6 +229,27 @@ namespace Xuf.Core
         }
 
         /// <summary>
+        /// Get a system by name
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="name"></param>
+        /// <param name="throwException"></param>
+        /// <returns></returns>
+        /// <exception cref="System.InvalidOperationException"></exception>
+        public T GetSystemByName<T>(string name, bool throwException = true) where T : IGameSystem{
+            var system = m_systems.FirstOrDefault(s => s.Name == name);
+            if (system == null)
+            {
+                if (throwException)
+                {
+                    throw new System.InvalidOperationException($"System {name} is not registered");
+                }
+                return default;
+            }
+            return (T)system;
+        }
+
+        /// <summary>
         /// Check if a system of specified type is registered
         /// </summary>
         /// <typeparam name="T">The system type</typeparam>
