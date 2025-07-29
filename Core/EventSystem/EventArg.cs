@@ -108,27 +108,4 @@ namespace Xuf.Core
         public Transform transform;
         public bool boolValue;
     }
-
-    /// <summary>
-    /// Damage event argument.
-    /// </summary>
-    [Serializable]
-    public class CDamageEventArg : CEventArgBase
-    {
-        //被攻击者
-        public GameObject defender;
-        //攻击者
-        public GameObject attacker;
-        //伤害值
-        public float damage;
-    }
-
-    /// <summary>
-    /// Actor event argument.
-    /// </summary>
-    [Serializable]
-    public class CActorEventArg : CEventArgBase
-    {
-        public CActor actor;
-    }
 }
