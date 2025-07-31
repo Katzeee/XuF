@@ -93,6 +93,13 @@ namespace XuF.Common.ObjectPool
             {
                 poolObj.OnSpawn();
             }
+            
+            // Call OnSpawn on all IPoolGameObject components
+            var poolGameObjects = obj.GetComponentsInChildren<IPoolGameObject>();
+            foreach (var poolGameObj in poolGameObjects)
+            {
+                poolGameObj.OnSpawn();
+            }
 
             return obj;
         }
@@ -147,8 +154,8 @@ namespace XuF.Common.ObjectPool
                 return;
             }
 
-            // Check if this object belongs to this pool
-            if (!obj.name.StartsWith(prefab.name))
+            // Check if this object belongs to this pool (more flexible check)
+            if (!obj.name.Contains(prefab.name))
             {
                 Debug.LogWarning($"[{poolName}] Attempting to release object that doesn't belong to this pool: {obj.name}");
                 return;
@@ -178,6 +185,13 @@ namespace XuF.Common.ObjectPool
             foreach (var poolObj in poolObjects)
             {
                 poolObj.Reset();
+            }
+            
+            // Call Reset on all IPoolGameObject components
+            var poolGameObjects = obj.GetComponentsInChildren<IPoolGameObject>();
+            foreach (var poolGameObj in poolGameObjects)
+            {
+                poolGameObj.Reset();
             }
 
             pool.Push(obj);
@@ -271,6 +285,13 @@ namespace XuF.Common.ObjectPool
             {
                 poolObj.Reset();
             }
+            
+            // Call Reset on all IPoolGameObject components
+            var poolGameObjects = obj.GetComponentsInChildren<IPoolGameObject>();
+            foreach (var poolGameObj in poolGameObjects)
+            {
+                poolGameObj.Reset();
+            }
 
             pool.Push(obj);
             TotalCount++;
@@ -285,8 +306,8 @@ namespace XuF.Common.ObjectPool
         private void ResetObject(GameObject obj)
         {
             // Reset transform to prefab state
-            obj.transform.localPosition = prefab.transform.localPosition;
-            obj.transform.localRotation = prefab.transform.localRotation;
+            obj.transform.position = prefab.transform.position;
+            obj.transform.rotation = prefab.transform.rotation;
             obj.transform.localScale = prefab.transform.localScale;
 
             // Reset Rigidbody if present
