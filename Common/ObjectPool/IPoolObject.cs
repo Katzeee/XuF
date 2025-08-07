@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace XuF.Common.ObjectPool
+namespace XuF.Common
 {
     /// <summary>
     /// Interface for objects that can be managed by object pool
@@ -11,7 +11,7 @@ namespace XuF.Common.ObjectPool
         /// Called when object is retrieved from pool
         /// </summary>
         void OnSpawn();
-        
+
         /// <summary>
         /// Reset object to initial state for reuse
         /// Should restore the object to a clean, reusable state
@@ -19,10 +19,9 @@ namespace XuF.Common.ObjectPool
         void Reset();
 
         /// <summary>
-        /// Release all resources held by this object
         /// Called when object is permanently discarded from pool
         /// Should clean up event listeners, references, etc.
         /// </summary>
-        void ReleaseResources();
+        void OnDestroy();
     }
-} 
+}

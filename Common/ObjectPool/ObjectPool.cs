@@ -2,18 +2,20 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace XuF.Common.ObjectPool
+namespace XuF.Common
 {
     /// <summary>
     /// Generic object pool class
     /// Supports pooling of any type that implements IPoolObject interface
     /// </summary>
     /// <typeparam name="T">Type of pooled object, must implement IPoolObject interface</typeparam>
-    public class ObjectPool<T> where T : class, IPoolObject, new()
+    public class ObjectPool<T> where T : class, IPoolObject
     {
         private readonly Stack<T> pool;
+        private readonly HashSet<T> activeObjects;
         private readonly int maxSize;
         private readonly string poolName;
+        private readonly Func<T> factory;
 
         /// <summary>
         /// Total number of objects in pool (including active and available)
@@ -28,32 +30,28 @@ namespace XuF.Common.ObjectPool
         /// <summary>
         /// Number of active objects
         /// </summary>
-        public int ActiveCount => TotalCount - AvailableCount;
+        public int ActiveCount => activeObjects.Count;
 
         /// <summary>
-        /// Constructor for object pool
+        /// Constructor for object pool with factory method
         /// </summary>
+        /// <param name="factory">Factory method to create new objects</param>
         /// <param name="initialSize">Initial pool size</param>
         /// <param name="maxSize">Maximum pool size, 0 means unlimited</param>
         /// <param name="poolName">Pool name for debugging</param>
         public ObjectPool(
+            Func<T> factory,
             int initialSize = 0,
             int maxSize = 0,
             string poolName = null)
         {
+            this.factory = factory ?? throw new ArgumentNullException(nameof(factory));
             this.maxSize = maxSize;
             this.poolName = poolName ?? typeof(T).Name;
 
             pool = new Stack<T>();
-
-            // Pre-create initial objects
-            for (int i = 0; i < initialSize; i++)
-            {
-                var obj = new T();
-                obj.Reset();
-                pool.Push(obj);
-                TotalCount++;
-            }
+            activeObjects = new HashSet<T>();
+            Prewarm(initialSize);
         }
 
         /// <summary>
@@ -71,10 +69,18 @@ namespace XuF.Common.ObjectPool
             }
             else
             {
-                // Pool is empty, create new object
-                obj = new T();
+                // Pool is empty, create new object using factory
+                obj = factory();
+                if (obj == null)
+                {
+                    Debug.LogError($"[{poolName}] Factory returned null object");
+                    return null;
+                }
                 TotalCount++;
             }
+
+            // Add to active objects tracking
+            activeObjects.Add(obj);
 
             // Reset object state
             obj.Reset();
@@ -97,11 +103,21 @@ namespace XuF.Common.ObjectPool
                 return;
             }
 
+            // Check if object is actually active (was obtained from this pool)
+            if (!activeObjects.Contains(obj))
+            {
+                Debug.LogWarning($"[{poolName}] Attempting to release object that is not active in this pool");
+                return;
+            }
+
+            // Remove from active objects tracking
+            activeObjects.Remove(obj);
+
             // Check pool size limit
             if (maxSize > 0 && pool.Count >= maxSize)
             {
                 // Pool is full, release object resources and discard
-                obj.ReleaseResources();
+                obj.OnDestroy();
                 TotalCount--;
                 Debug.LogWarning($"[{poolName}] Pool is full, object discarded. {GetStats()}");
                 return;
@@ -110,6 +126,21 @@ namespace XuF.Common.ObjectPool
             // Reset object state for reuse and add to pool
             obj.Reset();
             pool.Push(obj);
+        }
+
+        /// <summary>
+        /// Force release all active objects back to pool
+        /// </summary>
+        public void ReleaseAll()
+        {
+            var activeObjectsCopy = new List<T>(activeObjects);
+            foreach (var obj in activeObjectsCopy)
+            {
+                if (obj != null)
+                {
+                    Release(obj);
+                }
+            }
         }
 
         /// <summary>
@@ -126,7 +157,12 @@ namespace XuF.Common.ObjectPool
                     break;
                 }
 
-                var obj = new T();
+                var obj = factory();
+                if (obj == null)
+                {
+                    Debug.LogError($"[{poolName}] Factory returned null object during prewarm");
+                    continue;
+                }
                 obj.Reset();
                 pool.Push(obj);
                 TotalCount++;
@@ -134,7 +170,7 @@ namespace XuF.Common.ObjectPool
         }
 
         /// <summary>
-        /// Clear all objects in pool
+        /// Clear all objects in pool and destroy all active objects
         /// </summary>
         public void Clear()
         {
@@ -142,9 +178,19 @@ namespace XuF.Common.ObjectPool
             while (pool.Count > 0)
             {
                 var obj = pool.Pop();
-                obj.ReleaseResources();
+                obj.OnDestroy();
             }
-            
+
+            // Destroy all active objects
+            foreach (var obj in activeObjects)
+            {
+                if (obj != null)
+                {
+                    obj.OnDestroy();
+                }
+            }
+            activeObjects.Clear();
+
             TotalCount = 0;
         }
 
@@ -173,6 +219,25 @@ namespace XuF.Common.ObjectPool
         public bool IsFull()
         {
             return maxSize > 0 && pool.Count >= maxSize;
+        }
+
+        /// <summary>
+        /// Check if object is active in this pool
+        /// </summary>
+        /// <param name="obj">Object to check</param>
+        /// <returns>Whether object is active in this pool</returns>
+        public bool IsActive(T obj)
+        {
+            return activeObjects.Contains(obj);
+        }
+
+        /// <summary>
+        /// Get all active objects (read-only)
+        /// </summary>
+        /// <returns>Read-only collection of active objects</returns>
+        public IReadOnlyCollection<T> GetActiveObjects()
+        {
+            return activeObjects;
         }
     }
 }
