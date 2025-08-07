@@ -16,7 +16,6 @@ namespace Xuf.Core
         private bool m_paused = false;
         private List<int> m_cachedKeys = new(100);
 
-
         public void Update(float deltaTime, float unscaledDeltaTime)
         {
             if (m_paused)

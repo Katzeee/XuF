@@ -10,7 +10,6 @@ namespace Xuf.Core
         private const float c_epsilon = 0.0001f; // Precision for float comparison
         private const float c_maxCompensation = 0.1f; // Maximum compensation to prevent excessive correction
 
-        private WeakReference m_owner = null;
         private Action m_action = null;
 
         private readonly float ro_interval = 0;
@@ -22,22 +21,22 @@ namespace Xuf.Core
         private bool m_paused = false;
         private readonly bool m_timeUnscaled = false;
         private bool m_isCompleted = false;
-        
+
         // Compensation mechanism for timing errors
+
         private float m_accumulatedError = 0f; // Accumulated timing error
 
         public Timer(object owner, float interval, uint loopCount, Action action, bool timeUnscaled = false)
         {
-            if (owner == null || action == null)
+            if (action == null)
             {
-                Assert.IsTrue(false, "Timer owner or action is null");
+                Assert.IsTrue(false, "Timer action is null");
             }
             if (interval < 0)
             {
                 Assert.IsTrue(false, "Timer interval is less than 0");
             }
 
-            m_owner = new WeakReference(owner);
             m_action = action;
             ro_interval = Mathf.Max(interval, 0);
             ro_loopCount = Math.Max(loopCount, 1);
@@ -46,7 +45,7 @@ namespace Xuf.Core
 
         public void Update(float deltaTime, float unscaledDeltaTime)
         {
-            if (m_paused || !IsValid || m_action == null || m_isCompleted)
+            if (m_paused || m_action == null || m_isCompleted)
             {
                 return;
             }
@@ -60,7 +59,8 @@ namespace Xuf.Core
 
             float timeStep = m_timeUnscaled ? unscaledDeltaTime : deltaTime;
             m_elapsedTime += timeStep;
-            
+
+
             if (ro_loopCount != INFINITE_LOOPCOUNT)
             {
                 m_elapsedTime = Mathf.Min(m_elapsedTime, ro_interval * ro_loopCount);
@@ -78,10 +78,12 @@ namespace Xuf.Core
                 float expectedTriggerTime = (m_currentLoopCount + 1) * ro_interval;
                 float actualTriggerTime = m_elapsedTime;
                 float timingError = actualTriggerTime - expectedTriggerTime;
-                
+
                 // Accumulate error for compensation (clamped to prevent excessive correction)
+
                 m_accumulatedError += Mathf.Clamp(timingError, -c_maxCompensation, c_maxCompensation);
-                
+
+
                 m_currentLoopCount++;
                 m_currentCycleElapsedTime = 0f;
                 m_action?.Invoke();
@@ -95,7 +97,7 @@ namespace Xuf.Core
 
         public int Id => GetHashCode();
 
-        public bool ShouldClear => m_action == null || m_isCompleted || !IsValid;
+        public bool ShouldClear => m_action == null || m_isCompleted;
 
         public float RemainingTime
         {
@@ -113,20 +115,21 @@ namespace Xuf.Core
             }
         }
 
-        private bool IsValid { get { return m_owner.Target is UnityEngine.Object obj ? obj : m_owner.Target != null; } }
-
         // Check if timer is completed
         public bool IsCompleted => m_isCompleted;
-        
+
         // Pause/Resume timer
+
         public void Pause() => m_paused = true;
         public void Resume() => m_paused = false;
         public bool IsPaused => m_paused;
-        
+
         // Get accumulated timing error (for debugging)
+
         public float AccumulatedError => m_accumulatedError;
-        
+
         // Reset accumulated error (useful for debugging or manual correction)
+
         public void ResetError() => m_accumulatedError = 0f;
     }
 }
