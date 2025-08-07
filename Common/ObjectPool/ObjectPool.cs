@@ -13,9 +13,11 @@ namespace XuF.Common
     {
         private readonly Stack<T> pool;
         private readonly HashSet<T> activeObjects;
+        private readonly HashSet<T> pooledObjects; // Track objects in pool for O(1) lookup
         private readonly int maxSize;
         private readonly string poolName;
         private readonly Func<T> factory;
+        private bool isDisposed = false;
 
         /// <summary>
         /// Total number of objects in pool (including active and available)
@@ -31,6 +33,11 @@ namespace XuF.Common
         /// Number of active objects
         /// </summary>
         public int ActiveCount => activeObjects.Count;
+
+        /// <summary>
+        /// Whether the pool has been disposed
+        /// </summary>
+        public bool IsDisposed => isDisposed;
 
         /// <summary>
         /// Constructor for object pool with factory method
@@ -51,6 +58,7 @@ namespace XuF.Common
 
             pool = new Stack<T>();
             activeObjects = new HashSet<T>();
+            pooledObjects = new HashSet<T>();
             Prewarm(initialSize);
         }
 
@@ -60,13 +68,20 @@ namespace XuF.Common
         /// <returns>Pooled object</returns>
         public T Get()
         {
+            if (isDisposed)
+            {
+                Debug.LogError($"[{poolName}] Cannot get object from disposed pool");
+                return null;
+            }
+
             T obj;
 
             if (pool.Count > 0)
             {
                 // Get object from pool
                 obj = pool.Pop();
-                
+                pooledObjects.Remove(obj); // Remove from pooled tracking
+
                 // Safety check: ensure object is not already active
                 if (activeObjects.Contains(obj))
                 {
@@ -105,13 +120,19 @@ namespace XuF.Common
         /// <param name="obj">Object to release</param>
         public void Release(T obj)
         {
+            if (isDisposed)
+            {
+                Debug.LogWarning($"[{poolName}] Cannot release object to disposed pool: {obj}");
+                return;
+            }
+
             if (obj == null)
             {
                 Debug.LogWarning($"[{poolName}] Attempting to release null object");
                 return;
             }
 
-            if (pool.Contains(obj))
+            if (pooledObjects.Contains(obj))
             {
                 Debug.LogWarning($"[{poolName}: Double Free] Attempting to release object that is already in pool: {obj}");
                 return;
@@ -120,7 +141,7 @@ namespace XuF.Common
             // Check if object is actually active (was obtained from this pool)
             if (!activeObjects.Contains(obj))
             {
-                Debug.LogWarning($"[{poolName}] Attempting to release object that is not active in this pool");
+                Debug.LogWarning($"[{poolName}] Attempting to release object that is not active in this pool: {obj}");
                 return;
             }
 
@@ -140,6 +161,7 @@ namespace XuF.Common
             // Reset object state for reuse and add to pool
             obj.Reset();
             pool.Push(obj);
+            pooledObjects.Add(obj); // Add to pooled tracking
         }
 
         /// <summary>
@@ -147,6 +169,12 @@ namespace XuF.Common
         /// </summary>
         public void ReleaseAll()
         {
+            if (isDisposed)
+            {
+                Debug.LogWarning($"[{poolName}] Cannot release all objects from disposed pool");
+                return;
+            }
+
             var activeObjectsCopy = new List<T>(activeObjects);
             foreach (var obj in activeObjectsCopy)
             {
@@ -163,6 +191,12 @@ namespace XuF.Common
         /// <param name="count">Number of objects to create</param>
         public void Prewarm(int count)
         {
+            if (isDisposed)
+            {
+                Debug.LogWarning($"[{poolName}] Cannot prewarm disposed pool");
+                return;
+            }
+
             for (int i = 0; i < count; i++)
             {
                 if (maxSize > 0 && TotalCount >= maxSize)
@@ -179,6 +213,7 @@ namespace XuF.Common
                 }
                 obj.Reset();
                 pool.Push(obj);
+                pooledObjects.Add(obj); // Add to pooled tracking
                 TotalCount++;
             }
         }
@@ -192,6 +227,7 @@ namespace XuF.Common
             while (pool.Count > 0)
             {
                 var obj = pool.Pop();
+                pooledObjects.Remove(obj); // Remove from pooled tracking
                 obj.OnDestroy();
             }
 
@@ -204,8 +240,23 @@ namespace XuF.Common
                 }
             }
             activeObjects.Clear();
+            pooledObjects.Clear();
 
             TotalCount = 0;
+        }
+
+        /// <summary>
+        /// Dispose the pool and clean up all resources
+        /// </summary>
+        public void Dispose()
+        {
+            if (isDisposed)
+            {
+                return;
+            }
+
+            Clear();
+            isDisposed = true;
         }
 
         /// <summary>
@@ -214,7 +265,8 @@ namespace XuF.Common
         /// <returns>Statistics string</returns>
         public string GetStats()
         {
-            return $"[{poolName}] Total: {TotalCount}, Active: {ActiveCount}, Available: {AvailableCount}";
+            string disposedStatus = isDisposed ? " [DISPOSED]" : "";
+            return $"[{poolName}]{disposedStatus} Total: {TotalCount}, Active: {ActiveCount}, Available: {AvailableCount}";
         }
 
         /// <summary>
@@ -242,6 +294,10 @@ namespace XuF.Common
         /// <returns>Whether object is active in this pool</returns>
         public bool IsActive(T obj)
         {
+            if (obj == null)
+            {
+                return false;
+            }
             return activeObjects.Contains(obj);
         }
 
