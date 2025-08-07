@@ -66,6 +66,14 @@ namespace XuF.Common
             {
                 // Get object from pool
                 obj = pool.Pop();
+                
+                // Safety check: ensure object is not already active
+                if (activeObjects.Contains(obj))
+                {
+                    Debug.LogError($"[{poolName}] Object retrieved from pool is already active: {obj}");
+                    // Try to get another object
+                    return Get();
+                }
             }
             else
             {
@@ -100,6 +108,12 @@ namespace XuF.Common
             if (obj == null)
             {
                 Debug.LogWarning($"[{poolName}] Attempting to release null object");
+                return;
+            }
+
+            if (pool.Contains(obj))
+            {
+                Debug.LogWarning($"[{poolName}: Double Free] Attempting to release object that is already in pool: {obj}");
                 return;
             }
 

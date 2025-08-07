@@ -5,7 +5,7 @@ using UnityEngine.Assertions;
 
 namespace Xuf.Core
 {
-    class TimerSystem : IGameSystem
+    public class TimerSystem : IGameSystem
     {
 
         public string Name => "TimerSystem";

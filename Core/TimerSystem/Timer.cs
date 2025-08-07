@@ -4,7 +4,7 @@ using UnityEngine.Assertions;
 
 namespace Xuf.Core
 {
-    class Timer
+    public class Timer
     {
         public const uint INFINITE_LOOPCOUNT = uint.MaxValue;
         private const float c_epsilon = 0.0001f; // Precision for float comparison
