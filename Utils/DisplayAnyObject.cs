@@ -18,7 +18,12 @@ namespace Xuf.Utils
         /// <param name="include">Only display these property paths (empty means display all)</param>
         /// <param name="exclude">Exclude these property paths</param>
         /// <param name="maxDepth">Maximum recursion depth</param>
-        public static void DisplayAnyObject(object obj, List<string> include = null, List<string> exclude = null, int maxDepth = 3)
+        public static void DisplayAnyObject(
+            object obj,
+            List<string> include = null,
+            List<string> exclude = null,
+            int maxDepth = 3,
+            BindingFlags bindingAttr = BindingFlags.Public | BindingFlags.Instance | BindingFlags.NonPublic)
         {
             if (obj == null)
             {
@@ -26,7 +31,7 @@ namespace Xuf.Utils
                 return;
             }
 
-            DisplayAnyObjectInternal(obj, 0, include, exclude, "", maxDepth);
+            DisplayAnyObjectInternal(obj, 0, bindingAttr, include, exclude, "", maxDepth);
         }
 
         /// <summary>
@@ -38,14 +43,14 @@ namespace Xuf.Utils
         /// <param name="exclude">Exclude these property paths</param>
         /// <param name="currentPath">Current property path</param>
         /// <param name="maxDepth">Maximum recursion depth</param>
-        internal static void DisplayAnyObjectInternal(object obj, int depth, List<string> include, List<string> exclude, string currentPath, int maxDepth)
+        internal static void DisplayAnyObjectInternal(object obj, int depth, BindingFlags bindingAttr, List<string> include, List<string> exclude, string currentPath, int maxDepth)
         {
             if (obj == null || depth > maxDepth) return;
 
             Type type = obj.GetType();
 
             // Display all public fields
-            foreach (var field in type.GetFields(BindingFlags.Public | BindingFlags.Instance | BindingFlags.NonPublic))
+            foreach (var field in type.GetFields(bindingAttr))
             {
                 try
                 {
@@ -59,7 +64,7 @@ namespace Xuf.Utils
                     var value = field.GetValue(obj);
                     string name = field.Name;
 
-                    DisplayValue(name, value, field.FieldType, depth, include, exclude, fieldPath, maxDepth);
+                    DisplayValue(name, value, bindingAttr, field.FieldType, depth, include, exclude, fieldPath, maxDepth);
                 }
                 catch (Exception e)
                 {
@@ -68,7 +73,7 @@ namespace Xuf.Utils
             }
 
             // Display all public properties
-            foreach (var prop in type.GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.NonPublic))
+            foreach (var prop in type.GetProperties(bindingAttr))
             {
                 try
                 {
@@ -83,7 +88,7 @@ namespace Xuf.Utils
                     var value = prop.GetValue(obj);
                     string name = prop.Name;
 
-                    DisplayValue(name, value, prop.PropertyType, depth, include, exclude, propPath, maxDepth);
+                    DisplayValue(name, value, bindingAttr, prop.PropertyType, depth, include, exclude, propPath, maxDepth);
                 }
                 catch (Exception e)
                 {
@@ -92,33 +97,9 @@ namespace Xuf.Utils
             }
         }
 
-        /// <summary>
-        /// Convenience method: only display specified properties
-        /// </summary>
-        public static void DisplayObjectInclude(object obj, params string[] includeProperties)
-        {
-            DisplayAnyObject(obj, new List<string>(includeProperties), null);
-        }
-
-        /// <summary>
-        /// Convenience method: exclude specified properties
-        /// </summary>
-        public static void DisplayObjectExclude(object obj, params string[] excludeProperties)
-        {
-            DisplayAnyObject(obj, null, new List<string>(excludeProperties));
-        }
-
-        /// <summary>
-        /// Convenience method: display all properties
-        /// </summary>
-        public static void DisplayObject(object obj, int maxDepth = 3)
-        {
-            DisplayAnyObject(obj, null, null, maxDepth);
-        }
-
         #region Private Methods
 
-        private static void DisplayValue(string name, object value, Type valueType, int depth, List<string> include, List<string> exclude, string fieldPath, int maxDepth)
+        private static void DisplayValue(string name, object value, BindingFlags bindingAttr, Type valueType, int depth, List<string> include, List<string> exclude, string fieldPath, int maxDepth)
         {
             if (value == null)
             {
@@ -132,7 +113,7 @@ namespace Xuf.Utils
             {
                 EditorGUILayout.LabelField($"{name}: {value.GetType().Name}", EditorStyles.boldLabel);
                 EditorGUI.indentLevel++;
-                DisplayAnyObjectInternal(value, depth + 1, include, exclude, fieldPath, maxDepth);
+                DisplayAnyObjectInternal(value, depth + 1, bindingAttr, include, exclude, fieldPath, maxDepth);
                 EditorGUI.indentLevel--;
             }
         }
