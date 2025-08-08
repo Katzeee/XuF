@@ -10,36 +10,46 @@ namespace Xuf.Core
         private const float c_epsilon = 0.0001f; // Precision for float comparison
         private const float c_maxCompensation = 0.1f; // Maximum compensation to prevent excessive correction
 
+        // Static ID counter for incremental IDs
+        private static int s_nextId = 1;
+        // Added guard for ID overflow
+        private static int GetNextId()
+        {
+            // Avoid ID 0 as it's used as an invalid ID
+            if (s_nextId == int.MaxValue)
+                s_nextId = 1;
+            return s_nextId++;
+        }
+        
+        private int m_id;
+
         private Action m_action = null;
 
-        private readonly float ro_interval = 0;
-        private readonly uint ro_loopCount = 1;
+        // Changed from readonly to allow reset for object pooling
+        private float m_interval = 0;
+        private uint m_loopCount = 1;
 
         private float m_elapsedTime = 0;
         private float m_currentCycleElapsedTime = 0;
         private uint m_currentLoopCount = 0;
         private bool m_paused = false;
-        private readonly bool m_timeUnscaled = false;
+        private bool m_timeUnscaled = false;
         private bool m_isCompleted = false;
 
         // Compensation mechanism for timing errors
-
         private float m_accumulatedError = 0f; // Accumulated timing error
 
         public Timer(object owner, float interval, uint loopCount, Action action, bool timeUnscaled = false)
         {
-            if (action == null)
-            {
-                Assert.IsTrue(false, "Timer action is null");
-            }
             if (interval < 0)
             {
                 Assert.IsTrue(false, "Timer interval is less than 0");
             }
 
+            m_id = GetNextId();
             m_action = action;
-            ro_interval = Mathf.Max(interval, 0);
-            ro_loopCount = Math.Max(loopCount, 1);
+            m_interval = Mathf.Max(interval, 0);
+            m_loopCount = Math.Max(loopCount, 1);
             m_timeUnscaled = timeUnscaled;
         }
 
@@ -51,7 +61,7 @@ namespace Xuf.Core
             }
 
             // Timer is done
-            if (m_currentLoopCount >= ro_loopCount && ro_loopCount != INFINITE_LOOPCOUNT)
+            if (m_currentLoopCount >= m_loopCount && m_loopCount != INFINITE_LOOPCOUNT)
             {
                 m_isCompleted = true;
                 return;
@@ -60,42 +70,47 @@ namespace Xuf.Core
             float timeStep = m_timeUnscaled ? unscaledDeltaTime : deltaTime;
             m_elapsedTime += timeStep;
 
-
-            if (ro_loopCount != INFINITE_LOOPCOUNT)
+            if (m_loopCount != INFINITE_LOOPCOUNT)
             {
-                m_elapsedTime = Mathf.Min(m_elapsedTime, ro_interval * ro_loopCount);
+                m_elapsedTime = Mathf.Min(m_elapsedTime, m_interval * m_loopCount);
             }
 
             // Calculate current cycle time with error compensation
-            float expectedCycleTime = m_currentLoopCount * ro_interval;
+            float expectedCycleTime = m_currentLoopCount * m_interval;
             float actualCycleTime = m_elapsedTime;
-            m_currentCycleElapsedTime = Mathf.Min(ro_interval, actualCycleTime - expectedCycleTime + m_accumulatedError);
+            m_currentCycleElapsedTime = Mathf.Min(m_interval, actualCycleTime - expectedCycleTime + m_accumulatedError);
 
             // Check if we should trigger the action
-            if (m_currentCycleElapsedTime >= ro_interval)
+            if (m_currentCycleElapsedTime >= m_interval)
             {
                 // Calculate timing error for compensation
-                float expectedTriggerTime = (m_currentLoopCount + 1) * ro_interval;
+                float expectedTriggerTime = (m_currentLoopCount + 1) * m_interval;
                 float actualTriggerTime = m_elapsedTime;
                 float timingError = actualTriggerTime - expectedTriggerTime;
 
                 // Accumulate error for compensation (clamped to prevent excessive correction)
-
                 m_accumulatedError += Mathf.Clamp(timingError, -c_maxCompensation, c_maxCompensation);
-
 
                 m_currentLoopCount++;
                 m_currentCycleElapsedTime = 0f;
-                m_action?.Invoke();
+                
+                try
+                {
+                    m_action?.Invoke();
+                }
+                catch (Exception e)
+                {
+                    Debug.LogError($"Exception in timer callback: {e.Message}\n{e.StackTrace}");
+                }
 
-                if (m_currentLoopCount >= ro_loopCount && ro_loopCount != INFINITE_LOOPCOUNT)
+                if (m_currentLoopCount >= m_loopCount && m_loopCount != INFINITE_LOOPCOUNT)
                 {
                     m_isCompleted = true;
                 }
             }
         }
 
-        public int Id => GetHashCode();
+        public int Id => m_id;
 
         public bool ShouldClear => m_action == null || m_isCompleted;
 
@@ -106,12 +121,12 @@ namespace Xuf.Core
                 if (m_isCompleted)
                     return 0f;
 
-                if (ro_loopCount == INFINITE_LOOPCOUNT)
+                if (m_loopCount == INFINITE_LOOPCOUNT)
                 {
-                    return ro_interval <= 0f ? 0f : Mathf.Infinity;
+                    return m_interval <= 0f ? 0f : Mathf.Infinity;
                 }
 
-                return Mathf.Max(ro_loopCount * ro_interval - m_elapsedTime, 0f);
+                return Mathf.Max(m_loopCount * m_interval - m_elapsedTime, 0f);
             }
         }
 
@@ -119,17 +134,37 @@ namespace Xuf.Core
         public bool IsCompleted => m_isCompleted;
 
         // Pause/Resume timer
-
         public void Pause() => m_paused = true;
         public void Resume() => m_paused = false;
         public bool IsPaused => m_paused;
 
         // Get accumulated timing error (for debugging)
-
         public float AccumulatedError => m_accumulatedError;
 
         // Reset accumulated error (useful for debugging or manual correction)
-
         public void ResetError() => m_accumulatedError = 0f;
+
+        // Reset timer for object pooling
+        public void Reset(object owner, float interval, uint loopCount, Action action, bool timeUnscaled = false)
+        {
+            // Allow null action for object pooling (timer will be inactive)
+            if (interval < 0)
+            {
+                Assert.IsTrue(false, "Timer interval is less than 0");
+            }
+
+            // Assign new ID for reused timer
+            m_id = GetNextId();
+            m_action = action;
+            m_interval = Mathf.Max(interval, 0);
+            m_loopCount = Math.Max(loopCount, 1);
+            m_timeUnscaled = timeUnscaled;
+            m_elapsedTime = 0;
+            m_currentCycleElapsedTime = 0;
+            m_currentLoopCount = 0;
+            m_paused = false;
+            m_isCompleted = false;
+            m_accumulatedError = 0f;
+        }
     }
 }
