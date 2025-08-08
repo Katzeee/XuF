@@ -12,8 +12,8 @@ namespace XuF.Common
     public class ObjectPool<T> where T : class, IPoolObject
     {
         private readonly Stack<T> pool;
-        // private readonly HashSet<T> activeObjects;
-        // private readonly HashSet<T> pooledObjects; // Track objects in pool for O(1) lookup
+        private readonly HashSet<T> activeObjects;
+        private readonly HashSet<T> pooledObjects; // Track objects in pool for O(1) lookup
         private readonly int maxSize;
         private readonly string poolName;
         private readonly Func<T> factory;
@@ -32,7 +32,7 @@ namespace XuF.Common
         /// <summary>
         /// Number of active objects
         /// </summary>
-        // public int ActiveCount => activeObjects.Count;
+        public int ActiveCount => activeObjects.Count;
 
         /// <summary>
         /// Whether the pool has been disposed
@@ -57,8 +57,8 @@ namespace XuF.Common
             this.poolName = poolName ?? typeof(T).Name;
 
             pool = new Stack<T>();
-            // activeObjects = new HashSet<T>();
-            // pooledObjects = new HashSet<T>();
+            activeObjects = new HashSet<T>();
+            pooledObjects = new HashSet<T>();
             Prewarm(initialSize);
         }
 
@@ -80,15 +80,15 @@ namespace XuF.Common
             {
                 // Get object from pool
                 obj = pool.Pop();
-                // pooledObjects.Remove(obj); // Remove from pooled tracking
+                pooledObjects.Remove(obj); // Remove from pooled tracking
 
                 // Safety check: ensure object is not already active
-                // if (activeObjects.Contains(obj))
-                // {
-                //     Debug.LogError($"[{poolName}] Object retrieved from pool is already active: {obj}");
-                //     // Try to get another object
-                //     return Get();
-                // }
+                if (activeObjects.Contains(obj))
+                {
+                    Debug.LogError($"[{poolName}] Object retrieved from pool is already active: {obj}");
+                    // Try to get another object
+                    return Get();
+                }
             }
             else
             {
@@ -103,10 +103,7 @@ namespace XuF.Common
             }
 
             // Add to active objects tracking
-            // activeObjects.Add(obj);
-
-            // Reset object state
-            obj.Reset();
+            activeObjects.Add(obj);
 
             // Call object's OnSpawn method
             obj.OnSpawn();
@@ -132,21 +129,21 @@ namespace XuF.Common
                 return;
             }
 
-            // if (pooledObjects.Contains(obj))
-            // {
-            //     Debug.LogWarning($"[{poolName}: Double Free] Attempting to release object that is already in pool: {obj}");
-            //     return;
-            // }
+            if (pooledObjects.Contains(obj))
+            {
+                Debug.LogWarning($"[{poolName}: Double Free] Attempting to release object that is already in pool: {obj}");
+                return;
+            }
 
             // Check if object is actually active (was obtained from this pool)
-            // if (!activeObjects.Contains(obj))
-            // {
-            //     Debug.LogWarning($"[{poolName}] Attempting to release object that is not active in this pool: {obj}");
-            //     return;
-            // }
+            if (!activeObjects.Contains(obj))
+            {
+                Debug.LogWarning($"[{poolName}] Attempting to release object that is not active in this pool: {obj}");
+                return;
+            }
 
             // Remove from active objects tracking
-            // activeObjects.Remove(obj);
+            activeObjects.Remove(obj);
 
             // Check pool size limit
             if (maxSize > 0 && pool.Count >= maxSize)
@@ -161,29 +158,29 @@ namespace XuF.Common
             // Reset object state for reuse and add to pool
             obj.Reset();
             pool.Push(obj);
-            // pooledObjects.Add(obj); // Add to pooled tracking
+            pooledObjects.Add(obj); // Add to pooled tracking
         }
 
         /// <summary>
         /// Force release all active objects back to pool
         /// </summary>
-        // public void ReleaseAll()
-        // {
-        //     if (isDisposed)
-        //     {
-        //         Debug.LogWarning($"[{poolName}] Cannot release all objects from disposed pool");
-        //         return;
-        //     }
+        public void ReleaseAll()
+        {
+            if (isDisposed)
+            {
+                Debug.LogWarning($"[{poolName}] Cannot release all objects from disposed pool");
+                return;
+            }
 
-        //     var activeObjectsCopy = new List<T>(activeObjects);
-        //     foreach (var obj in activeObjectsCopy)
-        //     {
-        //         if (obj != null)
-        //         {
-        //             Release(obj);
-        //         }
-        //     }
-        // }
+            var activeObjectsCopy = new List<T>(activeObjects);
+            foreach (var obj in activeObjectsCopy)
+            {
+                if (obj != null)
+                {
+                    Release(obj);
+                }
+            }
+        }
 
         /// <summary>
         /// Pre-create objects in pool
@@ -213,7 +210,7 @@ namespace XuF.Common
                 }
                 obj.Reset();
                 pool.Push(obj);
-                // pooledObjects.Add(obj); // Add to pooled tracking
+                pooledObjects.Add(obj); // Add to pooled tracking
                 TotalCount++;
             }
         }
@@ -227,20 +224,20 @@ namespace XuF.Common
             while (pool.Count > 0)
             {
                 var obj = pool.Pop();
-                // pooledObjects.Remove(obj); // Remove from pooled tracking
+                pooledObjects.Remove(obj); // Remove from pooled tracking
                 obj.OnDestroy();
             }
 
             // Destroy all active objects
-            // foreach (var obj in activeObjects)
-            // {
-            //     if (obj != null)
-            //     {
-            //         obj.OnDestroy();
-            //     }
-            // }
-            // activeObjects.Clear();
-            // pooledObjects.Clear();
+            foreach (var obj in activeObjects)
+            {
+                if (obj != null)
+                {
+                    obj.OnDestroy();
+                }
+            }
+            activeObjects.Clear();
+            pooledObjects.Clear();
 
             TotalCount = 0;
         }
@@ -266,7 +263,7 @@ namespace XuF.Common
         public string GetStats()
         {
             string disposedStatus = isDisposed ? " [DISPOSED]" : "";
-            return $"[{poolName}]{disposedStatus} Total: {TotalCount}, Available: {AvailableCount}";
+            return $"[{poolName}]{disposedStatus} Total: {TotalCount}, Active: {ActiveCount}, Available: {AvailableCount}";
         }
 
         /// <summary>
@@ -287,27 +284,27 @@ namespace XuF.Common
             return maxSize > 0 && pool.Count >= maxSize;
         }
 
-        // /// <summary>
-        // /// Check if object is active in this pool
-        // /// </summary>
-        // /// <param name="obj">Object to check</param>
-        // /// <returns>Whether object is active in this pool</returns>
-        // public bool IsActive(T obj)
-        // {
-        //     if (obj == null)
-        //     {
-        //         return false;
-        //     }
-        //     return activeObjects.Contains(obj);
-        // }
+        /// <summary>
+        /// Check if object is active in this pool
+        /// </summary>
+        /// <param name="obj">Object to check</param>
+        /// <returns>Whether object is active in this pool</returns>
+        public bool IsActive(T obj)
+        {
+            if (obj == null)
+            {
+                return false;
+            }
+            return activeObjects.Contains(obj);
+        }
 
-        // /// <summary>
-        // /// Get all active objects (read-only)
-        // /// </summary>
-        // /// <returns>Read-only collection of active objects</returns>
-        // public IReadOnlyCollection<T> GetActiveObjects()
-        // {
-        //     return activeObjects;
-        // }
+        /// <summary>
+        /// Get all active objects (read-only)
+        /// </summary>
+        /// <returns>Read-only collection of active objects</returns>
+        public IReadOnlyCollection<T> GetActiveObjects()
+        {
+            return activeObjects;
+        }
     }
 }
