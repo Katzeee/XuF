@@ -10,162 +10,242 @@ namespace Xuf.Core
         public string Name => "TimerSystem";
         public int Priority => 100;
 
-        // Optimized data structures
-        private List<Timer> m_activeTimers = new(128);
-        private List<Timer> m_timerPool = new(64);
-        private HashSet<int> m_activeTimerIds = new(128);
+        // Pool-based data structures
+        private List<Timer> m_timerPool; // Dynamic list of all timers
+        private Stack<int> m_availableIndices; // Stack of available timer indices
+        private int m_poolSize = 1024; // Initial pool size
         private bool m_paused = false;
-        
-        // Batch operation buffers
-        private List<Timer> m_timersToRemove = new(32);
-        private List<Timer> m_timersToAdd = new(32);
+
+        // Buffer lists for pending operations to prevent modification during iteration
+        private List<(object owner, float interval, Action action, bool timeUnscaled, int timerId)> m_pendingAddTimers;
+        private List<(object owner, float interval, uint loopCount, Action action, bool timeUnscaled, int timerId)> m_pendingAddLoopTimers;
+        private List<int> m_pendingRemoveTimers;
+
+        public TimerSystem()
+        {
+            InitializePool();
+        }
+
+        private void InitializePool()
+        {
+            m_timerPool = new List<Timer>(m_poolSize);
+            m_availableIndices = new Stack<int>(m_poolSize);
+
+            // Initialize buffer lists
+            m_pendingAddTimers = new List<(object, float, Action, bool, int)>();
+            m_pendingAddLoopTimers = new List<(object, float, uint, Action, bool, int)>();
+            m_pendingRemoveTimers = new List<int>();
+
+            // Initialize all timers as inactive
+            for (int i = 0; i < m_poolSize; i++)
+            {
+                m_timerPool.Add(new Timer(null, 0, 1, null, false));
+                m_timerPool[i].SetActive(false);
+                m_availableIndices.Push(i);
+            }
+        }
 
         public void Update(float deltaTime, float unscaledDeltaTime)
         {
             if (m_paused)
                 return;
 
-            // Process batch additions
-            if (m_timersToAdd.Count > 0)
+            // Set flag to indicate we're in the update loop
+            m_isInUpdateLoop = true;
+
+            // Step 1: Process pending add operations first
+            ProcessPendingAddOperations();
+
+            var count = m_timerPool.Count;
+            // Step 2: Update all active timers in the pool
+            for (int i = 0; i < count; i++)
             {
-                foreach (var timer in m_timersToAdd)
+                var timer = m_timerPool[i];
+                if (timer != null && timer.Active)
                 {
-                    if (timer != null && !timer.ShouldClear && !m_activeTimerIds.Contains(timer.Id))
+                    timer.Update(deltaTime, unscaledDeltaTime);
+
+                    // If timer should be cleared, deactivate it and return to available stack
+                    if (timer.ShouldClear)
                     {
-                        m_activeTimers.Add(timer);
-                        m_activeTimerIds.Add(timer.Id);
+                        timer.SetActive(false);
+                        m_availableIndices.Push(i);
                     }
                 }
-                m_timersToAdd.Clear();
             }
 
-            // Update active timers and collect completed ones
-            for (int i = m_activeTimers.Count - 1; i >= 0; --i)
-            {
-                var timer = m_activeTimers[i];
-                if (timer == null) continue;
+            // Step 3: Process pending remove operations after timer updates
+            ProcessPendingRemoveOperations();
 
-                timer.Update(deltaTime, unscaledDeltaTime);
-                
-                if (timer.ShouldClear)
-                {
-                    m_timersToRemove.Add(timer);
-                    m_activeTimers.RemoveAt(i);
-                }
-            }
-
-            // Process batch removals
-            if (m_timersToRemove.Count > 0)
-            {
-                foreach (var timer in m_timersToRemove)
-                {
-                    if (timer != null)
-                    {
-                        m_activeTimerIds.Remove(timer.Id);
-                        ReturnTimerToPool(timer);
-                    }
-                }
-                m_timersToRemove.Clear();
-            }
+            // Clear the flag
+            m_isInUpdateLoop = false;
         }
 
-        public int AddTimer(Timer timer)
+        private void ProcessPendingAddOperations()
         {
-            if (timer == null)
+            // Process regular timers
+            foreach (var (owner, interval, action, timeUnscaled, timerId) in m_pendingAddTimers)
             {
-                Assert.IsTrue(false, "Timer is null");
-                return 0;
+                var timer = m_timerPool[timerId];
+                timer.Reset(owner, interval, 1, action, timeUnscaled);
+                timer.SetActive(true);
             }
-            
-            // Don't add timers with null actions (inactive timers)
-            if (timer.ShouldClear)
+            m_pendingAddTimers.Clear();
+
+            // Process loop timers
+            foreach (var (owner, interval, loopCount, action, timeUnscaled, timerId) in m_pendingAddLoopTimers)
             {
-                return 0;
+                var timer = m_timerPool[timerId];
+                timer.Reset(owner, interval, loopCount, action, timeUnscaled);
+                timer.SetActive(true);
             }
-            
-            // Remove existing timer with same ID if exists
-            RemoveTimer(timer.Id);
-            
-            // Add to batch buffer for next Update
-            m_timersToAdd.Add(timer);
-            return timer.Id;
+            m_pendingAddLoopTimers.Clear();
+        }
+
+        private void ProcessPendingRemoveOperations()
+        {
+            foreach (int index in m_pendingRemoveTimers)
+            {
+                if (index >= 0 && index < m_timerPool.Count)
+                {
+                    var timer = m_timerPool[index];
+                    if (timer != null && timer.Active)
+                    {
+                        timer.SetActive(false);
+                        m_availableIndices.Push(index);
+                    }
+                }
+            }
+            m_pendingRemoveTimers.Clear();
         }
 
         public int AddTimer(object owner, float interval, Action action, bool timeUnscaled = false)
         {
-            var timer = GetTimerFromPool(owner, interval, 1, action, timeUnscaled);
-            AddTimer(timer);
-            return timer.Id;
+            // Get available index first
+            int index = GetAvailableIndex();
+            if (index == -1)
+            {
+                Debug.LogError("TimerSystem: No available timer slots!");
+                return 0;
+            }
+
+            // Check if we're currently in the Update loop
+            if (IsInUpdateLoop())
+            {
+                // Add to pending buffer instead of immediate execution
+                m_pendingAddTimers.Add((owner, interval, action, timeUnscaled, index));
+                return index; // Return the real timer ID
+            }
+
+            var timer = m_timerPool[index];
+            timer.Reset(owner, interval, 1, action, timeUnscaled);
+            timer.SetActive(true);
+
+            return index; // Return the index as the timer identifier
         }
 
         public int AddLoopTimer(object owner, float interval, uint loopCount, Action action, bool timeUnscaled = false)
         {
-            var timer = GetTimerFromPool(owner, interval, loopCount, action, timeUnscaled);
-            AddTimer(timer);
-            return timer.Id;
+            // Get available index first
+            int index = GetAvailableIndex();
+            if (index == -1)
+            {
+                Debug.LogError("TimerSystem: No available timer slots!");
+                return 0;
+            }
+
+            // Check if we're currently in the Update loop
+            if (IsInUpdateLoop())
+            {
+                // Add to pending buffer instead of immediate execution
+                m_pendingAddLoopTimers.Add((owner, interval, loopCount, action, timeUnscaled, index));
+                return index; // Return the real timer ID
+            }
+
+            var timer = m_timerPool[index];
+            timer.Reset(owner, interval, loopCount, action, timeUnscaled);
+            timer.SetActive(true);
+
+            return index; // Return the index as the timer identifier
         }
 
-        public Timer GetTimer(int id)
+        public Timer GetTimer(int index)
         {
-            if (!m_activeTimerIds.Contains(id))
-                return null;
-                
-            // Linear search is acceptable for small numbers of timers
-            // For larger numbers, consider using a separate Dictionary for lookups
-            for (int i = 0; i < m_activeTimers.Count; ++i)
+            // Index is the position in the pool
+            if (index >= 0 && index < m_timerPool.Count)
             {
-                if (m_activeTimers[i].Id == id)
-                    return m_activeTimers[i];
+                var timer = m_timerPool[index];
+                if (timer != null && timer.Active)
+                {
+                    return timer;
+                }
             }
             return null;
         }
 
-        public void RemoveTimer(Timer timer)
+        public void RemoveTimer(int index)
         {
-            if (timer != null)
+            // Check if we're currently in the Update loop
+            if (IsInUpdateLoop())
             {
-                RemoveTimer(timer.Id);
+                // Add to pending buffer instead of immediate execution
+                m_pendingRemoveTimers.Add(index);
+                return;
+            }
+
+            // Handle pending timer removal - check if this timer is in pending add lists
+            m_pendingAddTimers.RemoveAll(item => item.timerId == index);
+            m_pendingAddLoopTimers.RemoveAll(item => item.timerId == index);
+
+            // Index is the position in the pool
+            if (index >= 0 && index < m_timerPool.Count)
+            {
+                var timer = m_timerPool[index];
+                if (timer != null && timer.Active)
+                {
+                    timer.SetActive(false);
+                    m_availableIndices.Push(index);
+                }
             }
         }
 
-        public void RemoveTimer(int id)
+        // Helper method to detect if we're currently in the Update loop
+        private bool m_isInUpdateLoop = false;
+        private bool IsInUpdateLoop()
         {
-            if (!m_activeTimerIds.Contains(id))
-                return;
-                
-            for (int i = 0; i < m_activeTimers.Count; ++i)
-            {
-                if (m_activeTimers[i].Id == id)
-                {
-                    var timer = m_activeTimers[i];
-                    m_activeTimers.RemoveAt(i);
-                    m_activeTimerIds.Remove(id);
-                    ReturnTimerToPool(timer);
-                    break;
-                }
-            }
+            return m_isInUpdateLoop;
         }
 
         public void ClearAllTimers()
         {
-            // Return all timers to pool
-            foreach (var timer in m_activeTimers)
+            // Deactivate all timers and reset the available indices stack
+            m_availableIndices.Clear();
+            for (int i = 0; i < m_timerPool.Count; i++)
             {
-                if (timer != null)
+                if (m_timerPool[i] != null)
                 {
-                    ReturnTimerToPool(timer);
+                    m_timerPool[i].SetActive(false);
+                    m_availableIndices.Push(i);
                 }
             }
-            
-            m_activeTimers.Clear();
-            m_activeTimerIds.Clear();
-            m_timersToAdd.Clear();
-            m_timersToRemove.Clear();
+
+            // Clear pending operations
+            m_pendingAddTimers.Clear();
+            m_pendingAddLoopTimers.Clear();
+            m_pendingRemoveTimers.Clear();
         }
 
         public int GetActiveTimerCount()
         {
-            return m_activeTimers.Count;
+            int count = 0;
+            for (int i = 0; i < m_timerPool.Count; i++)
+            {
+                if (m_timerPool[i] != null && m_timerPool[i].Active)
+                {
+                    count++;
+                }
+            }
+            return count;
         }
 
         public void SetPaused(bool paused)
@@ -173,52 +253,63 @@ namespace Xuf.Core
             m_paused = paused;
         }
 
-        // Object pooling methods
-        private Timer GetTimerFromPool(object owner, float interval, uint loopCount, Action action, bool timeUnscaled = false)
+        // Get an available index from the stack, expand pool if necessary
+        private int GetAvailableIndex()
         {
-            Timer timer;
-            if (m_timerPool.Count > 0)
+            if (m_availableIndices.Count > 0)
             {
-                timer = m_timerPool[m_timerPool.Count - 1];
-                m_timerPool.RemoveAt(m_timerPool.Count - 1);
-                timer.Reset(owner, interval, loopCount, action, timeUnscaled);
+                return m_availableIndices.Pop();
             }
-            else
+
+            // Expand pool if no available indices
+            ExpandPool();
+
+            if (m_availableIndices.Count > 0)
             {
-                timer = new Timer(owner, interval, loopCount, action, timeUnscaled);
+                return m_availableIndices.Pop();
             }
-            return timer;
+
+            return -1; // No available slots
         }
 
-        private void ReturnTimerToPool(Timer timer)
+        // Expand the timer pool
+        private void ExpandPool()
         {
-            if (timer != null && m_timerPool.Count < 256) // Limit pool size
+            int oldSize = m_timerPool.Count;
+            int newSize = oldSize * 2; // Double the pool size
+
+            // Add new timers to the pool
+            for (int i = oldSize; i < newSize; i++)
             {
-                // Reset with null action to mark as inactive
-                timer.Reset(null, 0, 1, null, false);
-                m_timerPool.Add(timer);
+                m_timerPool.Add(new Timer(null, 0, 1, null, false));
+                m_timerPool[i].SetActive(false);
+                m_availableIndices.Push(i);
             }
+
+            Debug.Log($"TimerSystem: Expanded pool to {newSize} timers");
         }
 
-        // Reset accumulated errors for all timers (useful for debugging)
+        // Reset accumulated errors for all active timers (useful for debugging)
         public void ResetAllTimerErrors()
         {
-            foreach (var timer in m_activeTimers)
+            for (int i = 0; i < m_timerPool.Count; i++)
             {
-                if (timer != null)
+                var timer = m_timerPool[i];
+                if (timer != null && timer.Active)
                 {
                     timer.ResetError();
                 }
             }
         }
 
-        // Get total accumulated error across all timers (for monitoring)
+        // Get total accumulated error across all active timers (for monitoring)
         public float GetTotalAccumulatedError()
         {
             float totalError = 0f;
-            foreach (var timer in m_activeTimers)
+            for (int i = 0; i < m_timerPool.Count; i++)
             {
-                if (timer != null)
+                var timer = m_timerPool[i];
+                if (timer != null && timer.Active)
                 {
                     totalError += Mathf.Abs(timer.AccumulatedError);
                 }
@@ -233,9 +324,10 @@ namespace Xuf.Core
             int completedCount = 0;
             float totalError = 0f;
 
-            foreach (var timer in m_activeTimers)
+            for (int i = 0; i < m_timerPool.Count; i++)
             {
-                if (timer != null)
+                var timer = m_timerPool[i];
+                if (timer != null && timer.Active)
                 {
                     if (timer.IsCompleted)
                         completedCount++;

@@ -10,18 +10,7 @@ namespace Xuf.Core
         private const float c_epsilon = 0.0001f; // Precision for float comparison
         private const float c_maxCompensation = 0.1f; // Maximum compensation to prevent excessive correction
 
-        // Static ID counter for incremental IDs
-        private static int s_nextId = 1;
-        // Added guard for ID overflow
-        private static int GetNextId()
-        {
-            // Avoid ID 0 as it's used as an invalid ID
-            if (s_nextId == int.MaxValue)
-                s_nextId = 1;
-            return s_nextId++;
-        }
-        
-        private int m_id;
+        private bool m_active = false; // New property for pool-based approach
 
         private Action m_action = null;
 
@@ -46,16 +35,16 @@ namespace Xuf.Core
                 Assert.IsTrue(false, "Timer interval is less than 0");
             }
 
-            m_id = GetNextId();
             m_action = action;
             m_interval = Mathf.Max(interval, 0);
             m_loopCount = Math.Max(loopCount, 1);
             m_timeUnscaled = timeUnscaled;
+            m_active = true; // Timer is active when created
         }
 
         public void Update(float deltaTime, float unscaledDeltaTime)
         {
-            if (m_paused || m_action == null || m_isCompleted)
+            if (!m_active || m_paused || m_action == null || m_isCompleted)
             {
                 return;
             }
@@ -110,9 +99,13 @@ namespace Xuf.Core
             }
         }
 
-        public int Id => m_id;
+        // New property for pool-based approach
+        public bool Active => m_active;
+        
+        // Set active state (for pool management)
+        public void SetActive(bool active) => m_active = active;
 
-        public bool ShouldClear => m_action == null || m_isCompleted;
+        public bool ShouldClear => !m_active || m_action == null || m_isCompleted;
 
         public float RemainingTime
         {
@@ -153,8 +146,6 @@ namespace Xuf.Core
                 Assert.IsTrue(false, "Timer interval is less than 0");
             }
 
-            // Assign new ID for reused timer
-            m_id = GetNextId();
             m_action = action;
             m_interval = Mathf.Max(interval, 0);
             m_loopCount = Math.Max(loopCount, 1);
@@ -165,6 +156,7 @@ namespace Xuf.Core
             m_paused = false;
             m_isCompleted = false;
             m_accumulatedError = 0f;
+            m_active = action != null; // Set active based on whether action is provided
         }
     }
 }
