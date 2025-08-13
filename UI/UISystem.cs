@@ -16,7 +16,7 @@ namespace Xuf.UI
             _UIRoot = gameEntry.Find("UIRoot");
             if (_UIRoot == null)
             {
-                Debug.LogError("Fatal: not set UIRoot");
+                LogUtils.Error("Fatal: not set UIRoot");
                 throw new Exception("");
             }
             _UIRoot.SetParent(gameEntry);
@@ -47,7 +47,7 @@ namespace Xuf.UI
             {
                 if (_UIRoot == null)
                 {
-                    Debug.LogError("Fatal: not set UIRoot");
+                    LogUtils.Error("Fatal: not set UIRoot");
                     throw new Exception("");
                 }
                 return _UIRoot;
@@ -61,20 +61,20 @@ namespace Xuf.UI
             var attrs = (UIPrefab) Attribute.GetCustomAttribute(type, typeof(UIPrefab));
             if (attrs == null)
             {
-                Debug.LogError($"Can't get attribute \"UIPrefab\" from {type}");
+                LogUtils.Error($"Can't get attribute \"UIPrefab\" from {type}");
                 return null;
             }
             GameObject prefab = Resources.Load<GameObject>(attrs.path);
             if (prefab == null)
             {
-                Debug.LogError($"Can't load ui prefab at {attrs.path}");
+                LogUtils.Error($"Can't load ui prefab at {attrs.path}");
                 return null;
             }
             GameObject ui = GameObject.Instantiate(prefab, UIRoot);
             var Form = ui.GetComponent<TForm>();
             if (Form == null)
             {
-                Debug.LogWarning($"UIForm {type} has no FormBase attached.");
+                LogUtils.Warning($"UIForm {type} has no FormBase attached.");
                 GameObject.Destroy(ui);
                 return null;
             }
@@ -119,7 +119,7 @@ namespace Xuf.UI
             Type type = typeof(TForm);
             if (!UIForm.ContainsKey(type))
             {
-                Debug.LogError($"No UIForm named {type}");
+                LogUtils.Error($"No UIForm named {type}");
                 return;
             }
 
@@ -142,7 +142,7 @@ namespace Xuf.UI
             Type type = typeof(TForm);
             if (!UIForm.ContainsKey(type))
             {
-                Debug.LogError($"No UIForm named {type}");
+                LogUtils.Error($"No UIForm named {type}");
                 return;
             }
             UIForm[type].SetActive(!UIForm[type].activeSelf);

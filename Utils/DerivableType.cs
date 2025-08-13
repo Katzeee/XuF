@@ -36,7 +36,7 @@ namespace Xuf.Utils
 
                     if (type == null)
                     {
-                        Debug.LogWarning($"Could not find type: {m_assemblyQualifiedTypeName}");
+                        Xuf.Core.LogUtils.Warning($"Could not find type: {m_assemblyQualifiedTypeName}");
                     }
                 }
                 return type;
@@ -74,7 +74,7 @@ namespace Xuf.Utils
                 catch (Exception ex)
                 {
                     // Ignore reflection exceptions
-                    Debug.LogWarning($"Error loading types from assembly {assembly.FullName}: {ex.Message}");
+                    Xuf.Core.LogUtils.Warning($"Error loading types from assembly {assembly.FullName}: {ex.Message}");
                 }
             }
 

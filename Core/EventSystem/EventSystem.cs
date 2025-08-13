@@ -47,12 +47,12 @@ namespace Xuf.Core
             if (m_eventHandlers.TryGetValue(eventId, out var existing))
             {
                 m_eventHandlers[eventId] = Delegate.Combine(existing, handler);
-                Debug.Log($"[EventSystem] Added handler for event {eventId} (type: {typeof(T).Name}), total handlers: {m_eventHandlers[eventId].GetInvocationList().Length}");
+                LogUtils.Trace($"[EventSystem] Added handler for event {eventId} (type: {typeof(T).Name}), total handlers: {m_eventHandlers[eventId].GetInvocationList().Length}");
             }
             else
             {
                 m_eventHandlers[eventId] = handler;
-                Debug.Log($"[EventSystem] Registered new event {eventId} (type: {typeof(T).Name})");
+                LogUtils.Trace($"[EventSystem] Registered new event {eventId} (type: {typeof(T).Name})");
             }
         }
 
@@ -65,17 +65,17 @@ namespace Xuf.Core
                 if (newHandler == null)
                 {
                     m_eventHandlers.Remove(eventId);
-                    Debug.Log($"[EventSystem] Removed last handler for event {eventId} (type: {typeof(T).Name}), event unregistered");
+                    LogUtils.Trace($"[EventSystem] Removed last handler for event {eventId} (type: {typeof(T).Name}), event unregistered");
                 }
                 else
                 {
                     m_eventHandlers[eventId] = newHandler;
-                    Debug.Log($"[EventSystem] Removed handler for event {eventId} (type: {typeof(T).Name}), remaining handlers: {newHandler.GetInvocationList().Length}");
+                    LogUtils.Trace($"[EventSystem] Removed handler for event {eventId} (type: {typeof(T).Name}), remaining handlers: {newHandler.GetInvocationList().Length}");
                 }
             }
             else
             {
-                Debug.LogWarning($"[EventSystem] Attempted to unsubscribe from non-existent event {eventId} (type: {typeof(T).Name})");
+                LogUtils.Warning($"[EventSystem] Attempted to unsubscribe from non-existent event {eventId} (type: {typeof(T).Name})");
             }
         }
 
@@ -123,7 +123,7 @@ namespace Xuf.Core
                     var expectedType = handler.Method.GetParameters().Length > 0
                         ? handler.Method.GetParameters()[0].ParameterType.Name
                         : "Unknown";
-                    Debug.LogError($"[EventSystem] Type mismatch when publishing event {eventId}. Expected: {expectedType}, Got: {typeof(T).Name}");
+                    LogUtils.Error($"[EventSystem] Type mismatch when publishing event {eventId}. Expected: {expectedType}, Got: {typeof(T).Name}");
                 }
             }
         }
@@ -164,7 +164,7 @@ namespace Xuf.Core
                     }
                     catch (Exception e)
                     {
-                        Debug.LogError($"[EventSystem] Error executing queued event {queuedEvent.eventId}: {e.Message}");
+                        LogUtils.Error($"[EventSystem] Error executing queued event {queuedEvent.eventId}: {e.Message}");
                     }
                 }
             }

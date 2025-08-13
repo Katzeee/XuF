@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using UnityEngine;
+using Xuf.Core;
 
 namespace XuF.Common
 {
@@ -70,7 +70,7 @@ namespace XuF.Common
         {
             if (isDisposed)
             {
-                Debug.LogError($"[{poolName}] Cannot get object from disposed pool");
+                LogUtils.Error($"[{poolName}] Cannot get object from disposed pool");
                 return null;
             }
 
@@ -85,7 +85,7 @@ namespace XuF.Common
                 // Safety check: ensure object is not already active
                 if (activeObjects.Contains(obj))
                 {
-                    Debug.LogError($"[{poolName}] Object retrieved from pool is already active: {obj}");
+                    LogUtils.Error($"[{poolName}] Object retrieved from pool is already active: {obj}");
                     // Try to get another object
                     return Get();
                 }
@@ -96,7 +96,7 @@ namespace XuF.Common
                 obj = factory();
                 if (obj == null)
                 {
-                    Debug.LogError($"[{poolName}] Factory returned null object");
+                    LogUtils.Error($"[{poolName}] Factory returned null object");
                     return null;
                 }
                 TotalCount++;
@@ -119,26 +119,26 @@ namespace XuF.Common
         {
             if (isDisposed)
             {
-                Debug.LogWarning($"[{poolName}] Cannot release object to disposed pool: {obj}");
+                LogUtils.Warning($"[{poolName}] Cannot release object to disposed pool: {obj}");
                 return;
             }
 
             if (obj == null)
             {
-                Debug.LogWarning($"[{poolName}] Attempting to release null object");
+                LogUtils.Warning($"[{poolName}] Attempting to release null object");
                 return;
             }
 
             if (pooledObjects.Contains(obj))
             {
-                Debug.LogWarning($"[{poolName}: Double Free] Attempting to release object that is already in pool: {obj}");
+                LogUtils.Warning($"[{poolName}: Double Free] Attempting to release object that is already in pool: {obj}");
                 return;
             }
 
             // Check if object is actually active (was obtained from this pool)
             if (!activeObjects.Contains(obj))
             {
-                Debug.LogWarning($"[{poolName}] Attempting to release object that is not active in this pool: {obj}");
+                LogUtils.Warning($"[{poolName}] Attempting to release object that is not active in this pool: {obj}");
                 return;
             }
 
@@ -151,7 +151,7 @@ namespace XuF.Common
                 // Pool is full, release object resources and discard
                 obj.OnDestroy();
                 TotalCount--;
-                Debug.LogWarning($"[{poolName}] Pool is full, object discarded. {GetStats()}");
+                LogUtils.Warning($"[{poolName}] Pool is full, object discarded. {GetStats()}");
                 return;
             }
 
@@ -168,7 +168,7 @@ namespace XuF.Common
         {
             if (isDisposed)
             {
-                Debug.LogWarning($"[{poolName}] Cannot release all objects from disposed pool");
+                LogUtils.Warning($"[{poolName}] Cannot release all objects from disposed pool");
                 return;
             }
 
@@ -190,7 +190,7 @@ namespace XuF.Common
         {
             if (isDisposed)
             {
-                Debug.LogWarning($"[{poolName}] Cannot prewarm disposed pool");
+                LogUtils.Warning($"[{poolName}] Cannot prewarm disposed pool");
                 return;
             }
 
@@ -198,14 +198,14 @@ namespace XuF.Common
             {
                 if (maxSize > 0 && TotalCount >= maxSize)
                 {
-                    Debug.LogWarning($"[{poolName}] Cannot prewarm more objects, pool is at max size");
+                    LogUtils.Warning($"[{poolName}] Cannot prewarm more objects, pool is at max size");
                     break;
                 }
 
                 var obj = factory();
                 if (obj == null)
                 {
-                    Debug.LogError($"[{poolName}] Factory returned null object during prewarm");
+                    LogUtils.Error($"[{poolName}] Factory returned null object during prewarm");
                     continue;
                 }
                 obj.Reset();

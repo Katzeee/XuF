@@ -28,7 +28,7 @@ namespace Xuf.UI
             m_eventSystem = CSystemManager.Instance.GetSystem<CEventSystem>();
             if (m_eventSystem == null)
             {
-                Debug.LogError("Failed to get EventSystem from GameManager. Make sure it's registered.");
+                LogUtils.Error("Failed to get EventSystem from GameManager. Make sure it's registered.");
             }
 
             // Automatically subscribe to common component events if they exist
@@ -83,7 +83,7 @@ namespace Xuf.UI
                 m_eventSystem = CSystemManager.Instance.GetSystem<CEventSystem>();
                 if (m_eventSystem == null)
                 {
-                    Debug.LogError("EventSystem not found in GameManager");
+                    LogUtils.Error("EventSystem not found in GameManager");
                     return;
                 }
             }
@@ -194,7 +194,7 @@ namespace Xuf.UI
                 m_eventSystem = CSystemManager.Instance.GetSystem<CEventSystem>();
                 if (m_eventSystem == null)
                 {
-                    Debug.LogError("EventSystem not found in GameManager");
+                    LogUtils.Error("EventSystem not found in GameManager");
                     return;
                 }
             }

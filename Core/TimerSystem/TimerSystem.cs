@@ -125,7 +125,7 @@ namespace Xuf.Core
             int index = GetAvailableIndex();
             if (index == -1)
             {
-                Debug.LogError("TimerSystem: No available timer slots!");
+                LogUtils.Error("TimerSystem: No available timer slots!");
                 return 0;
             }
 
@@ -150,7 +150,7 @@ namespace Xuf.Core
             int index = GetAvailableIndex();
             if (index == -1)
             {
-                Debug.LogError("TimerSystem: No available timer slots!");
+                LogUtils.Error("TimerSystem: No available timer slots!");
                 return 0;
             }
 
@@ -286,7 +286,7 @@ namespace Xuf.Core
                 m_availableIndices.Push(i);
             }
 
-            Debug.Log($"TimerSystem: Expanded pool to {newSize} timers");
+            LogUtils.Trace($"TimerSystem: Expanded pool to {newSize} timers");
         }
 
         // Reset accumulated errors for all active timers (useful for debugging)

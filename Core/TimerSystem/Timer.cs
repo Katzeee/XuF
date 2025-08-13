@@ -89,7 +89,7 @@ namespace Xuf.Core
                 }
                 catch (Exception e)
                 {
-                    Debug.LogError($"Exception in timer callback: {e.Message}\n{e.StackTrace}");
+                    LogUtils.Error($"Exception in timer callback: {e.Message}\n{e.StackTrace}");
                 }
 
                 if (m_currentLoopCount >= m_loopCount && m_loopCount != INFINITE_LOOPCOUNT)
