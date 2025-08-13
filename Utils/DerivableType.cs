@@ -17,29 +17,18 @@ namespace Xuf.Utils
         {
             get
             {
-                Type type = null;
-                // Load the type if it's not loaded yet
-                if (type == null && !string.IsNullOrEmpty(m_assemblyQualifiedTypeName))
-                {
-                    type = Type.GetType(m_assemblyQualifiedTypeName);
+				if (string.IsNullOrEmpty(m_assemblyQualifiedTypeName))
+				{
+					return null;
+				}
 
-                    // If not found, try to find the type in all loaded assemblies
-                    if (type == null)
-                    {
-                        foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
-                        {
-                            type = assembly.GetType(m_assemblyQualifiedTypeName);
-                            if (type != null)
-                                break;
-                        }
-                    }
-
-                    if (type == null)
-                    {
-                        Xuf.Core.LogUtils.Warning($"Could not find type: {m_assemblyQualifiedTypeName}");
-                    }
-                }
-                return type;
+				// Resolve without forcing AppDomain to load missing assemblies
+				var resolved = ResolveTypeSafely(m_assemblyQualifiedTypeName);
+				if (resolved == null)
+				{
+					Xuf.Core.LogUtils.Warning($"Could not find type: {m_assemblyQualifiedTypeName}");
+				}
+				return resolved;
             }
         }
 
@@ -52,34 +41,14 @@ namespace Xuf.Utils
             return serializableType?.Type;
         }
 
-        private static List<Type> GetDerivedTypes()
+		private static List<Type> GetDerivedTypes()
         {
-            var derivedTypes = new List<Type>();
-
-            // Get all types that derive from the base type
-            foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
-            {
-                try
-                {
-                    // Find all types that derive from the base type
-                    foreach (var type in assembly.GetTypes())
-                    {
-                        if (typeof(T).IsAssignableFrom(type) && !type.IsAbstract && type != typeof(T))
-                        {
-                            derivedTypes.Add(type);
-                        }
-
-                    }
-                }
-                catch (Exception ex)
-                {
-                    // Ignore reflection exceptions
-                    Xuf.Core.LogUtils.Warning($"Error loading types from assembly {assembly.FullName}: {ex.Message}");
-                }
-            }
-
-            // Sort types by name for better display
-            return derivedTypes.OrderBy(t => t.Name).ToList();
+			// Use Unity's TypeCache for fast, cached type discovery in Editor
+			var types = TypeCache.GetTypesDerivedFrom<T>()
+				.Where(type => !type.IsAbstract && type != typeof(T))
+				.OrderBy(t => t.Name)
+				.ToList();
+			return types;
         }
 
         public static void DrawTypeDropdown(string label, SerializedProperty typeProperty, Action<Type> onTypeChanged = null)
@@ -88,12 +57,14 @@ namespace Xuf.Utils
             string currentTypeName = typeNameProp.stringValue;
             List<Type> availableTypes = GetDerivedTypes();
 
-            // Get the current type from the serialized name
-            Type currentType = null;
-            if (!string.IsNullOrEmpty(currentTypeName))
-            {
-                currentType = Type.GetType(currentTypeName);
-            }
+			// Resolve current type from the stored name without triggering assembly loads
+			Type currentType = null;
+			if (!string.IsNullOrEmpty(currentTypeName))
+			{
+				string currentFullName = ExtractFullName(currentTypeName);
+				currentType = availableTypes.FirstOrDefault(t =>
+					t.AssemblyQualifiedName == currentTypeName || t.FullName == currentFullName);
+			}
 
             // Create a rect for the property field
             Rect position = EditorGUILayout.GetControlRect();
@@ -118,19 +89,50 @@ namespace Xuf.Utils
                     typeProperty.serializedObject.ApplyModifiedProperties();
                 });
 
-                // Add each available type to the menu
-                foreach (var type in availableTypes)
-                {
-                    menu.AddItem(new GUIContent(type.Name), currentType == type, () =>
-                    {
-                        typeNameProp.stringValue = type.AssemblyQualifiedName;
-                        onTypeChanged?.Invoke(type);
-                        typeProperty.serializedObject.ApplyModifiedProperties();
-                    });
-                }
+				// Add each available type to the menu
+				foreach (var type in availableTypes)
+				{
+					menu.AddItem(new GUIContent(type.Name), currentType == type, () =>
+					{
+						typeNameProp.stringValue = type.AssemblyQualifiedName;
+						onTypeChanged?.Invoke(type);
+						typeProperty.serializedObject.ApplyModifiedProperties();
+					});
+				}
 
                 menu.DropDown(position);
             }
         }
+
+		private static string ExtractFullName(string storedName)
+		{
+			int commaIndex = storedName.IndexOf(',');
+			return (commaIndex >= 0 ? storedName.Substring(0, commaIndex) : storedName).Trim();
+		}
+
+		private static Type ResolveTypeSafely(string storedName)
+		{
+			string fullName = ExtractFullName(storedName);
+
+			// First try exact match among already loaded assemblies without loading new ones
+			foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
+			{
+				var type = assembly.GetType(fullName, false);
+				if (type != null)
+				{
+					return type;
+				}
+			}
+
+			// As a last resort, try Type.GetType but do NOT throw; this may still return null
+			try
+			{
+				return Type.GetType(storedName, false);
+			}
+			catch
+			{
+				return null;
+			}
+		}
     }
 }
