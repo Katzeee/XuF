@@ -103,8 +103,8 @@ namespace Xuf.UI
             form.CloseCallback = () => CloseForm<TForm, TData>();
 
             form.m_data = data;
-            form.Refresh(data);
             form.OnActivate();
+            form.Refresh(data);
             ui.SetActive(true);
 
             // Publish open event using the UIPrefab attribute
