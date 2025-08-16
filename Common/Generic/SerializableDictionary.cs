@@ -235,15 +235,24 @@ namespace Xuf.Common
                 // Indent child elements
                 EditorGUI.indentLevel++;
 
-                // Calculate rects for Add button
+                // Calculate rects for Add and Validate buttons
                 Rect buttonRect = new Rect(position.x, position.y + EditorGUIUtility.singleLineHeight,
-                                           position.width - 30f, EditorGUIUtility.singleLineHeight);
+                                           position.width - 60f, EditorGUIUtility.singleLineHeight);
+                Rect validateRect = new Rect(position.x + position.width - 60f,
+                                        position.y + EditorGUIUtility.singleLineHeight,
+                                        25f, EditorGUIUtility.singleLineHeight);
                 Rect addRect = new Rect(position.x + position.width - 30f,
                                         position.y + EditorGUIUtility.singleLineHeight,
                                         25f, EditorGUIUtility.singleLineHeight);
 
                 // Display size info
                 EditorGUI.LabelField(buttonRect, $"Size: {listProp.arraySize}");
+
+                // Validate button
+                if (GUI.Button(validateRect, "✓"))
+                {
+                    ValidateDictionary(listProp);
+                }
 
                 // Add button
                 if (GUI.Button(addRect, "+"))
@@ -325,6 +334,81 @@ namespace Xuf.Common
             }
 
             return height;
+        }
+
+        private void ValidateDictionary(SerializedProperty listProperty)
+        {
+            // Dictionary to track keys we've seen
+            Dictionary<object, List<int>> keyIndices = new Dictionary<object, List<int>>();
+            bool hasDuplicates = false;
+
+            // Iterate through all elements
+            for (int i = 0; i < listProperty.arraySize; i++)
+            {
+                SerializedProperty element = listProperty.GetArrayElementAtIndex(i);
+                SerializedProperty keyProp = element.FindPropertyRelative("Key");
+
+
+                object keyValue = GetPropertyValue(keyProp);
+
+
+                if (keyValue != null)
+                {
+                    // Track this key and its index
+                    if (!keyIndices.ContainsKey(keyValue))
+                    {
+                        keyIndices[keyValue] = new List<int> { i };
+                    }
+                    else
+                    {
+                        // Found a duplicate!
+                        keyIndices[keyValue].Add(i);
+                        hasDuplicates = true;
+                    }
+                }
+            }
+
+            if (hasDuplicates)
+            {
+                // Report duplicates
+                string message = "Duplicate keys found:\n";
+                foreach (var kvp in keyIndices)
+                {
+                    if (kvp.Value.Count > 1)
+                    {
+                        message += $"Key '{kvp.Key}' at indices: {string.Join(", ", kvp.Value)}\n";
+                    }
+                }
+                EditorUtility.DisplayDialog("Duplicate Keys", message, "OK");
+            }
+            else
+            {
+                EditorUtility.DisplayDialog("Dictionary Validation", "No duplicate keys found.", "OK");
+            }
+        }
+
+        private object GetPropertyValue(SerializedProperty property)
+        {
+            switch (property.propertyType)
+            {
+                case SerializedPropertyType.Integer:
+                    return property.intValue;
+                case SerializedPropertyType.Boolean:
+                    return property.boolValue;
+                case SerializedPropertyType.Float:
+                    return property.floatValue;
+                case SerializedPropertyType.String:
+                    return property.stringValue;
+                case SerializedPropertyType.ObjectReference:
+                    return property.objectReferenceValue;
+                case SerializedPropertyType.Enum:
+                    return property.enumValueIndex;
+                // Add other property types as needed
+                default:
+                    // For complex types, use the instance ID as a fallback
+                    // This is not perfect but helps detect duplicates in many cases
+                    return property.propertyPath.GetHashCode();
+            }
         }
     }
 }
