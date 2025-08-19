@@ -15,7 +15,8 @@ namespace Xuf.Core
         /// Register a game system with priority-based ordering
         /// </summary>
         /// <param name="system">The system to register</param>
-        public void RegisterGameSystem(IGameSystem system)
+        /// <param name="enableByDefault">Whether to enable the system immediately after registration (default: false)</param>
+        public void RegisterGameSystem(IGameSystem system, bool enableByDefault = true)
         {
             if (system == null)
             {
@@ -42,8 +43,15 @@ namespace Xuf.Core
 
             m_systems.Insert(insertIndex, system);
 
-            // Call OnEnable when system is registered
-            system.OnEnable();
+            // If enableByDefault is true, call OnEnable, otherwise add to disabled systems
+            if (enableByDefault)
+            {
+                system.OnEnable();
+            }
+            else
+            {
+                m_disabledSystems.Add(system);
+            }
         }
 
         /// <summary>
