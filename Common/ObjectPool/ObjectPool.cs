@@ -224,8 +224,11 @@ namespace XuF.Common
             while (pool.Count > 0)
             {
                 var obj = pool.Pop();
-                pooledObjects.Remove(obj); // Remove from pooled tracking
-                obj.OnDestroy();
+                if (obj != null)
+                {
+                    pooledObjects.Remove(obj); // Remove from pooled tracking
+                    obj.OnDestroy();
+                }
             }
 
             // Destroy all active objects
