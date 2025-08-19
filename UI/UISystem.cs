@@ -74,7 +74,7 @@ namespace Xuf.UI
             var Form = ui.GetComponent<TForm>();
             if (Form == null)
             {
-                LogUtils.Warning($"UIForm {type} has no FormBase attached.");
+                LogUtils.Error($"UIForm {type} has no FormBase attached.");
                 GameObject.Destroy(ui);
                 return null;
             }
