@@ -83,9 +83,12 @@ namespace Xuf.UI
         }
 
         /// <summary>
-        /// Opens a form with data, creating a model and binding it to the form
+        /// Opens a form with initial data
+        /// The form will create and manage its own model internally
         /// </summary>
-        public void OpenForm<TForm, TData>(TData data) where TForm : FormBase<TData>
+        public void OpenForm<TForm, TData, TModel>(TData data) 
+            where TForm : FormBase<TData, TModel>
+            where TModel : ModelBase<TModel, TData>, new()
         {
             Type type = typeof(TForm);
 
@@ -105,12 +108,9 @@ namespace Xuf.UI
 
             // Set close callback for the form
             form.CloseCallback = () => CloseForm<TForm>();
-
-            // Create model with provided data
-            var model = new ModelBase<TData>(data);
-
-            // Set model on form and activate it
-            form.SetModel(model);
+            
+            // Initialize form with data and activate it
+            form.Initialize(data);
             form.Activate();
             ui.SetActive(true);
 
@@ -120,6 +120,8 @@ namespace Xuf.UI
                 throw new Exception($"UIPrefab attribute not found on {type.Name}");
             m_eventSystem.Publish(attr.OpenEventId, new CTransformEventArg { value = ui.transform });
         }
+
+
 
         /// <summary>
         /// Closes a form by type, properly cleaning up model bindings

@@ -5,29 +5,38 @@ using UnityEngine;
 namespace Xuf.UI
 {
     /// <summary>
-    /// Generic model class that can notify when data changes.
+    /// Abstract base class for all models that can notify when data changes.
     /// Follows unidirectional data flow pattern where Model changes trigger View updates.
-    /// This is a pure Model that only manages data state and notifications.
-    /// Can be used directly without subclassing for simple data models.
+    /// Uses CRTP so concrete models declare their own type for stronger typing.
     /// </summary>
-    public class ModelBase<T>
+    public abstract class ModelBase<TModel, TData>
+        where TModel : ModelBase<TModel, TData>
     {
-        private T _data;
+        private TData _data;
 
         /// <summary>
         /// Event triggered when data changes
         /// </summary>
-        public event Action<T> OnDataChanged;
+        public event Action<TData> OnDataChanged;
 
         /// <summary>
         /// The data stored in this model
         /// </summary>
-        public T Data { get => _data; }
+        public TData Data { get => _data; }
 
         /// <summary>
-        /// Constructor with initial data
+        /// Default constructor for use with FormBase<TData, TModel> pattern
         /// </summary>
-        public ModelBase(T initialData = default)
+        public ModelBase()
+        {
+            _data = default;
+        }
+
+        /// <summary>
+        /// Initialize the model with data
+        /// Called by FormBase when creating a model instance
+        /// </summary>
+        public void InitializeData(TData initialData)
         {
             _data = initialData;
         }
@@ -44,12 +53,15 @@ namespace Xuf.UI
         ///     data.score += points;
         /// });
         /// </example>
-        public void UpdateData(Action<T> updateAction)
+        public void UpdateData(Action<TData> updateAction)
         {
             if (updateAction == null)
                 return;
+
+            var oldData = _data;
             updateAction(_data);
             NotifyDataChanged();
+            OnDataUpdated(oldData, _data);
         }
 
 
@@ -62,14 +74,15 @@ namespace Xuf.UI
         /// var newPlayerData = new PlayerData { health = 100, name = "Player1" };
         /// UpdateData(newPlayerData);
         /// </example>
-        public void UpdateData(T newData)
+        public void UpdateData(TData newData)
         {
-            if (EqualityComparer<T>.Default.Equals(_data, newData))
+            if (EqualityComparer<TData>.Default.Equals(_data, newData))
                 return;
 
-
+            var oldData = _data;
             _data = newData;
             NotifyDataChanged();
+            OnDataUpdated(oldData, _data);
         }
 
         /// <summary>
@@ -79,5 +92,25 @@ namespace Xuf.UI
         {
             OnDataChanged?.Invoke(_data);
         }
+
+        /// <summary>
+        /// Called when the model is first created and bound to a form
+        /// Override this method to perform initialization logic
+        /// </summary>
+        public abstract void OnModelCreated();
+
+        /// <summary>
+        /// Called when the model is about to be destroyed
+        /// Override this method to perform cleanup logic
+        /// </summary>
+        public abstract void OnModelDestroyed();
+
+        /// <summary>
+        /// Called when data is updated
+        /// Override this method to add custom logic after data changes
+        /// </summary>
+        /// <param name="oldData">Previous data value</param>
+        /// <param name="newData">New data value</param>
+        public abstract void OnDataUpdated(TData oldData, TData newData);
     }
 }

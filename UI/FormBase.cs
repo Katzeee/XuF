@@ -107,23 +107,28 @@ namespace Xuf.UI
     }
 
     /// <summary>
-    /// Form base class for a specific data type.
+    /// Form base class for a specific data type and model type.
     /// This class represents the View component in the MVC pattern.
     /// Views are responsible for:
     /// 1. Displaying data from the Model
     /// 2. Handling user input
     /// 3. Updating the Model in response to user actions
     /// </summary>
-    public abstract class FormBase<TData> : FormBase
+    public abstract class FormBase<TData, TModel> : FormBase
+        where TModel : ModelBase<TModel, TData>, new()
     {
-        protected ModelBase<TData> Model { get; private set; }
+        protected TModel Model { get; private set; }
 
         /// <summary>
-        /// Sets the model for this form
+        /// Initializes the form with data, creating the appropriate model
+        /// The model is automatically created based on the TModel type parameter
         /// </summary>
-        internal void SetModel(ModelBase<TData> model)
+        internal void Initialize(TData data)
         {
-            Model = model;
+            Model = new TModel();
+            Model.InitializeData(data);
+            // Notify model that it has been created and bound
+            Model.OnModelCreated();
         }
 
         /// <summary>
@@ -153,6 +158,8 @@ namespace Xuf.UI
             if (Model != null)
             {
                 Model.OnDataChanged -= Refresh;
+                // Notify model that it is about to be destroyed
+                Model.OnModelDestroyed();
             }
 
             // Clear references before calling base deactivate
