@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using Xuf.Core;
 using System.Reflection;
+using System.Collections.Generic;
 
 namespace Xuf.UI
 {
@@ -39,13 +40,27 @@ namespace Xuf.UI
             return component;
         }
 
-        protected static void ClearTemplateChildren(Transform parent, GameObject template)
+        protected static void ClearChildrenTemplate(Transform parent, GameObject template)
         {
-            template.SetActive(false);
+            ClearChildrenTemplate(parent, new List<GameObject> { template });
+        }
+
+        protected static void ClearChildrenTemplate(Transform parent, List<GameObject> templates)
+        {
+            if (templates == null)
+            {
+                return;
+            }
+
+            foreach (var template in templates)
+            {
+                template.SetActive(false);
+            }
+
             for (int i = 0; i < parent.childCount; i++)
             {
                 var child = parent.GetChild(i);
-                if (child.gameObject != template)
+                if (!templates.Contains(child.gameObject))
                 {
                     GameObject.Destroy(child.gameObject);
                 }
@@ -137,14 +152,14 @@ namespace Xuf.UI
         /// </summary>
         public override sealed void Activate()
         {
+            // Call virtual activation method for derived classes
+            base.Activate();
+
             // Subscribe to model updates
             Model.OnDataChanged += Refresh;
 
             // Initial refresh with current data
             Refresh(Model.Data);
-
-            // Call virtual activation method for derived classes
-            base.Activate();
         }
 
 

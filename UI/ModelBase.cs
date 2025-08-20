@@ -37,6 +37,10 @@ namespace Xuf.UI
         /// </summary>
         public void InitializeData(T initialData)
         {
+            if (initialData == null)
+            {
+                return;
+            }
             _data = initialData;
         }
 
