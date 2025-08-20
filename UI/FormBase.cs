@@ -115,7 +115,7 @@ namespace Xuf.UI
     /// 3. Updating the Model in response to user actions
     /// </summary>
     public abstract class FormBase<TData, TModel> : FormBase
-        where TModel : ModelBase<TModel, TData>, new()
+        where TModel : ModelBase<TData>, new()
     {
         protected TModel Model { get; private set; }
 

@@ -7,22 +7,21 @@ namespace Xuf.UI
     /// <summary>
     /// Abstract base class for all models that can notify when data changes.
     /// Follows unidirectional data flow pattern where Model changes trigger View updates.
-    /// Uses CRTP so concrete models declare their own type for stronger typing.
+    /// Each concrete model should inherit from this class and implement its specific behavior.
     /// </summary>
-    public abstract class ModelBase<TModel, TData>
-        where TModel : ModelBase<TModel, TData>
+    public abstract class ModelBase<T>
     {
-        private TData _data;
+        private T _data;
 
         /// <summary>
         /// Event triggered when data changes
         /// </summary>
-        public event Action<TData> OnDataChanged;
+        public event Action<T> OnDataChanged;
 
         /// <summary>
         /// The data stored in this model
         /// </summary>
-        public TData Data { get => _data; }
+        public T Data { get => _data; }
 
         /// <summary>
         /// Default constructor for use with FormBase<TData, TModel> pattern
@@ -36,7 +35,7 @@ namespace Xuf.UI
         /// Initialize the model with data
         /// Called by FormBase when creating a model instance
         /// </summary>
-        public void InitializeData(TData initialData)
+        public void InitializeData(T initialData)
         {
             _data = initialData;
         }
@@ -53,7 +52,7 @@ namespace Xuf.UI
         ///     data.score += points;
         /// });
         /// </example>
-        public void UpdateData(Action<TData> updateAction)
+        public void UpdateData(Action<T> updateAction)
         {
             if (updateAction == null)
                 return;
@@ -74,9 +73,9 @@ namespace Xuf.UI
         /// var newPlayerData = new PlayerData { health = 100, name = "Player1" };
         /// UpdateData(newPlayerData);
         /// </example>
-        public void UpdateData(TData newData)
+        public void UpdateData(T newData)
         {
-            if (EqualityComparer<TData>.Default.Equals(_data, newData))
+            if (EqualityComparer<T>.Default.Equals(_data, newData))
                 return;
 
             var oldData = _data;
@@ -97,13 +96,13 @@ namespace Xuf.UI
         /// Called when the model is first created and bound to a form
         /// Override this method to perform initialization logic
         /// </summary>
-        public abstract void OnModelCreated();
+        public virtual void OnModelCreated() { }
 
         /// <summary>
         /// Called when the model is about to be destroyed
         /// Override this method to perform cleanup logic
         /// </summary>
-        public abstract void OnModelDestroyed();
+        public virtual void OnModelDestroyed() { }
 
         /// <summary>
         /// Called when data is updated
@@ -111,6 +110,6 @@ namespace Xuf.UI
         /// </summary>
         /// <param name="oldData">Previous data value</param>
         /// <param name="newData">New data value</param>
-        public abstract void OnDataUpdated(TData oldData, TData newData);
+        public virtual void OnDataUpdated(T oldData, T newData) { }
     }
 }

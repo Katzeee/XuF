@@ -88,7 +88,7 @@ namespace Xuf.UI
         /// </summary>
         public void OpenForm<TForm, TData, TModel>(TData data) 
             where TForm : FormBase<TData, TModel>
-            where TModel : ModelBase<TModel, TData>, new()
+            where TModel : ModelBase<TData>, new()
         {
             Type type = typeof(TForm);
 
