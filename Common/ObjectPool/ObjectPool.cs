@@ -149,7 +149,7 @@ namespace XuF.Common
             if (maxSize > 0 && pool.Count >= maxSize)
             {
                 // Pool is full, release object resources and discard
-                obj.OnDestroy();
+                obj.OnPoolDestroy();
                 TotalCount--;
                 LogUtils.Warning($"[{poolName}] Pool is full, object discarded. {GetStats()}");
                 return;
@@ -227,7 +227,7 @@ namespace XuF.Common
                 if (obj != null)
                 {
                     pooledObjects.Remove(obj); // Remove from pooled tracking
-                    obj.OnDestroy();
+                    obj.OnPoolDestroy();
                 }
             }
 
@@ -236,7 +236,7 @@ namespace XuF.Common
             {
                 if (obj != null)
                 {
-                    obj.OnDestroy();
+                    obj.OnPoolDestroy();
                 }
             }
             activeObjects.Clear();

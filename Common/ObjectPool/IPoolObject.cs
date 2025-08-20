@@ -22,6 +22,6 @@ namespace XuF.Common
         /// Called when object is permanently discarded from pool
         /// Should clean up event listeners, references, etc.
         /// </summary>
-        void OnDestroy();
+        void OnPoolDestroy();
     }
 }
