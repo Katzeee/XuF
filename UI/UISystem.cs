@@ -55,7 +55,8 @@ namespace Xuf.UI
             set => _UIRoot = value;
         }
 
-        private GameObject CreateUIForm<TForm, TData>() where TForm : FormBase<TData>
+        private GameObject CreateUIForm<TForm>()
+
         {
             Type type = typeof(TForm);
             var attrs = (UIPrefab) Attribute.GetCustomAttribute(type, typeof(UIPrefab));
@@ -81,6 +82,9 @@ namespace Xuf.UI
             return ui;
         }
 
+        /// <summary>
+        /// Opens a form with data, creating a model and binding it to the form
+        /// </summary>
         public void OpenForm<TForm, TData>(TData data) where TForm : FormBase<TData>
         {
             Type type = typeof(TForm);
@@ -88,11 +92,11 @@ namespace Xuf.UI
             // Close existing form of same type if open
             if (UIForm.ContainsKey(type))
             {
-                CloseForm<TForm, TData>();
+                CloseForm<TForm>();
             }
 
             // Create new form instance
-            GameObject ui = CreateUIForm<TForm, TData>();
+            GameObject ui = CreateUIForm<TForm>();
             if (ui == null) return;
 
             UIForm[type] = ui;
@@ -100,11 +104,14 @@ namespace Xuf.UI
             var form = ui.GetComponent<TForm>();
 
             // Set close callback for the form
-            form.CloseCallback = () => CloseForm<TForm, TData>();
+            form.CloseCallback = () => CloseForm<TForm>();
 
-            form.m_data = data;
-            form.OnActivate();
-            form.Refresh(data);
+            // Create model with provided data
+            var model = new ModelBase<TData>(data);
+
+            // Set model on form and activate it
+            form.SetModel(model);
+            form.Activate();
             ui.SetActive(true);
 
             // Publish open event using the UIPrefab attribute
@@ -114,7 +121,10 @@ namespace Xuf.UI
             m_eventSystem.Publish(attr.OpenEventId, new CTransformEventArg { value = ui.transform });
         }
 
-        public void CloseForm<TForm, TData>() where TForm : FormBase<TData>
+        /// <summary>
+        /// Closes a form by type, properly cleaning up model bindings
+        /// </summary>
+        public void CloseForm<TForm>() where TForm : FormBase
         {
             Type type = typeof(TForm);
             if (!UIForm.ContainsKey(type))
@@ -125,7 +135,8 @@ namespace Xuf.UI
 
             GameObject ui = UIForm[type];
             var form = ui.GetComponent<TForm>();
-            form.OnDeActivate();
+
+            form.Deactivate();
 
             // Publish close event using the UIPrefab attribute
             var attr = (UIPrefab) Attribute.GetCustomAttribute(type, typeof(UIPrefab));
@@ -137,7 +148,7 @@ namespace Xuf.UI
             GameObject.Destroy(ui);
         }
 
-        public void ToggleForm<TForm>()
+        public void ToggleForm<TForm>() where TForm : FormBase
         {
             Type type = typeof(TForm);
             if (!UIForm.ContainsKey(type))
@@ -149,4 +160,3 @@ namespace Xuf.UI
         }
     }
 }
-

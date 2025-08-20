@@ -67,16 +67,6 @@ namespace Xuf.UI
                 }
             }
         }
-    }
-
-    public abstract class FormBase<T> : FormBase
-    {
-        public T m_data;
-
-        public abstract void OnActivate();
-        public abstract void OnDeActivate();
-
-        public abstract void Refresh(T data);
 
         protected CEventSystem m_eventSystem = CSystemManager.Instance.GetSystem<CEventSystem>(throwException: false);
 
@@ -91,5 +81,90 @@ namespace Xuf.UI
         {
             m_closeCallback?.Invoke();
         }
+
+
+        public virtual void OnActivate() { }
+        public virtual void OnDeActivate() { }
+
+        /// <summary>
+        /// Activates the form, making it ready for interaction.
+        /// Base implementation simply calls OnActivate.
+        /// </summary>
+        public virtual void Activate()
+        {
+            OnActivate();
+        }
+
+
+        /// <summary>
+        /// Deactivates the form, cleaning up any resources.
+        /// Base implementation simply calls OnDeActivate.
+        /// </summary>
+        public virtual void Deactivate()
+        {
+            OnDeActivate();
+        }
+    }
+
+    /// <summary>
+    /// Form base class for a specific data type.
+    /// This class represents the View component in the MVC pattern.
+    /// Views are responsible for:
+    /// 1. Displaying data from the Model
+    /// 2. Handling user input
+    /// 3. Updating the Model in response to user actions
+    /// </summary>
+    public abstract class FormBase<TData> : FormBase
+    {
+        protected ModelBase<TData> Model { get; private set; }
+
+        /// <summary>
+        /// Sets the model for this form
+        /// </summary>
+        internal void SetModel(ModelBase<TData> model)
+        {
+            Model = model;
+        }
+
+        /// <summary>
+        /// Activates the form, subscribes to model updates, and performs initial refresh.
+        /// Sealed to prevent further overriding - customize behavior in OnActivate instead.
+        /// </summary>
+        public override sealed void Activate()
+        {
+            // Subscribe to model updates
+            Model.OnDataChanged += Refresh;
+
+            // Initial refresh with current data
+            Refresh(Model.Data);
+
+            // Call virtual activation method for derived classes
+            base.Activate();
+        }
+
+
+        /// <summary>
+        /// Deactivates the form and cleans up subscriptions.
+        /// Sealed to prevent further overriding - customize behavior in OnDeActivate instead.
+        /// </summary>
+        public override sealed void Deactivate()
+        {
+            // Unsubscribe from model
+            if (Model != null)
+            {
+                Model.OnDataChanged -= Refresh;
+            }
+
+            // Clear references before calling base deactivate
+            Model = null;
+
+            // Call base deactivation method (which calls OnDeActivate)
+            base.Deactivate();
+        }
+
+        /// <summary>
+        /// Refreshes the UI with the provided data.
+        /// </summary>
+        public abstract void Refresh(TData data);
     }
 }
