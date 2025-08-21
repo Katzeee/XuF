@@ -118,7 +118,7 @@ namespace Xuf.UI
             var attr = (UIPrefab) Attribute.GetCustomAttribute(type, typeof(UIPrefab));
             if (attr == null)
                 throw new Exception($"UIPrefab attribute not found on {type.Name}");
-            m_eventSystem.Publish(attr.OpenEventId, new CTransformEventArg { value = ui.transform });
+            m_eventSystem.Publish(attr.OpenEventId, new CTransformEventArg { transform = ui.transform });
         }
 
 
@@ -144,7 +144,7 @@ namespace Xuf.UI
             var attr = (UIPrefab) Attribute.GetCustomAttribute(type, typeof(UIPrefab));
             if (attr == null)
                 throw new Exception($"UIPrefab attribute not found on {type.Name}");
-            m_eventSystem.Publish(attr.CloseEventId, new CTransformEventArg { value = ui.transform });
+            m_eventSystem.Publish(attr.CloseEventId, new CTransformEventArg { transform = ui.transform });
 
             UIForm.Remove(type);
             GameObject.Destroy(ui);

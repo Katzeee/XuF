@@ -57,7 +57,7 @@ namespace Xuf.Core
     [Serializable]
     public class CTransformEventArg : CEventArgBase
     {
-        public Transform value;
+        public Transform transform;
     }
 
     /// <summary>
@@ -66,7 +66,7 @@ namespace Xuf.Core
     [Serializable]
     public class CGameObjectEventArg : CEventArgBase
     {
-        public GameObject value;
+        public GameObject gameObject;
     }
 
     /// <summary>

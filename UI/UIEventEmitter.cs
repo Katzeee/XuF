@@ -92,7 +92,7 @@ namespace Xuf.UI
             {
                 if (config.eventType == type)
                 {
-                    var arg = config.eventArg ?? eventArg ?? new CTransformEventArg { value = from };
+                    var arg = config.eventArg ?? eventArg ?? new CTransformEventArg { transform = from };
                     PublishWithGenericType(config.eventId, arg);
                 }
             }
@@ -198,7 +198,7 @@ namespace Xuf.UI
                     return;
                 }
             }
-            m_eventSystem.Publish<CTransformEventArg>(@event, new CTransformEventArg { value = transform });
+            m_eventSystem.Publish<CTransformEventArg>(@event, new CTransformEventArg { transform = transform });
         }
     }
 
