@@ -29,7 +29,7 @@ namespace Xuf.UI
     public abstract class FormBase : UIBehaviour
     {
         //SECTION: Utility Functions
-        protected static TComp GetOrAddComponent<TComp>(GameObject gameObject)
+        public static TComp GetOrAddComponent<TComp>(GameObject gameObject)
             where TComp : Component
         {
             var component = gameObject.GetComponent<TComp>();
