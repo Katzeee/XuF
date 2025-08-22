@@ -131,7 +131,7 @@ namespace Xuf.UI
             Type type = typeof(TForm);
             if (!UIForm.ContainsKey(type))
             {
-                LogUtils.Error($"No UIForm named {type}");
+                LogUtils.Warning($"No UIForm named {type}");
                 return;
             }
 
