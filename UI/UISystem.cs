@@ -86,7 +86,7 @@ namespace Xuf.UI
         /// Opens a form with initial data
         /// The form will create and manage its own model internally
         /// </summary>
-        public void OpenForm<TForm, TData, TModel>(TData data) 
+        public void OpenForm<TForm, TData, TModel>(TData data)
             where TForm : FormBase<TData, TModel>
             where TModel : ModelBase<TData>, new()
         {
@@ -108,7 +108,7 @@ namespace Xuf.UI
 
             // Set close callback for the form
             form.CloseCallback = () => CloseForm<TForm>();
-            
+
             // Initialize form with data and activate it
             form.Initialize(data);
             form.Activate();
@@ -150,15 +150,20 @@ namespace Xuf.UI
             GameObject.Destroy(ui);
         }
 
-        public void ToggleForm<TForm>() where TForm : FormBase
+        public void ToggleForm<TForm, TData, TModel>(TData data) where TForm : FormBase<TData, TModel>
+            where TModel : ModelBase<TData>, new()
         {
             Type type = typeof(TForm);
             if (!UIForm.ContainsKey(type))
             {
-                LogUtils.Error($"No UIForm named {type}");
+                OpenForm<TForm, TData, TModel>(data);
                 return;
             }
-            UIForm[type].SetActive(!UIForm[type].activeSelf);
+            if (UIForm[type].activeSelf)
+            {
+                CloseForm<TForm>();
+                return;
+            }
         }
     }
 }
