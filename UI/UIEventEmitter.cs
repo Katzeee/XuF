@@ -19,6 +19,20 @@ namespace Xuf.UI
         // List of all UI event configs
         public List<CUIEventConfig> eventConfigs = new();
 
+        // Interactable state - controls whether events are processed
+        [SerializeField]
+        private bool m_interactable = true;
+        
+        // Public property for interactable state
+        public bool interactable
+        {
+            get { return m_interactable; }
+            set 
+            { 
+                m_interactable = value;
+            }
+        }
+
         // Cache the event system reference for better performance
         private CEventSystem m_eventSystem;
 
@@ -78,6 +92,10 @@ namespace Xuf.UI
         // Helper: Broadcast event by type
         private void BroadcastByType(EUIEventType type, Transform from, CEventArgBase eventArg = null)
         {
+            // Check if interactable before processing events
+            if (!m_interactable)
+                return;
+
             if (m_eventSystem == null)
             {
                 m_eventSystem = CSystemManager.Instance.GetSystem<CEventSystem>();
@@ -189,6 +207,10 @@ namespace Xuf.UI
         // For Animation Broadcast
         public void Broadcast(EEventId @event)
         {
+            // Check if interactable before processing events
+            if (!m_interactable)
+                return;
+
             if (m_eventSystem == null)
             {
                 m_eventSystem = CSystemManager.Instance.GetSystem<CEventSystem>();
