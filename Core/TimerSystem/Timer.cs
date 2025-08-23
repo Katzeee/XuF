@@ -33,6 +33,7 @@ namespace Xuf.Core
         private const float c_maxCompensation = 0.1f; // Maximum compensation to prevent excessive correction
 
         private bool m_active = false; // New property for pool-based approach
+        private object m_owner = null; // Owner reference for ownership tracking
 
         private Action m_action = null;
 
@@ -50,7 +51,7 @@ namespace Xuf.Core
         // Compensation mechanism for timing errors
         private float m_accumulatedError = 0f; // Accumulated timing error
 
-        public Timer(float interval, uint loopCount, Action action, bool timeUnscaled = false)
+        public Timer(float interval, uint loopCount, Action action, bool timeUnscaled = false, object owner = null)
         {
             if (interval < 0)
             {
@@ -61,6 +62,7 @@ namespace Xuf.Core
             m_interval = Mathf.Max(interval, 0);
             m_loopCount = Math.Max(loopCount, 1);
             m_timeUnscaled = timeUnscaled;
+            m_owner = owner;
             m_active = true; // Timer is active when created
         }
 
@@ -127,6 +129,9 @@ namespace Xuf.Core
         // Set active state (for pool management)
         public void SetActive(bool active) => m_active = active;
 
+        // Get owner reference
+        public object Owner => m_owner;
+
         public bool ShouldClear => !m_active || m_action == null || m_isCompleted;
 
         public float RemainingTime
@@ -160,7 +165,7 @@ namespace Xuf.Core
         public void ResetError() => m_accumulatedError = 0f;
 
         // Reset timer for object pooling
-        public void Reset(float interval, uint loopCount, Action action, bool timeUnscaled = false)
+        public void Reset(float interval, uint loopCount, Action action, bool timeUnscaled = false, object owner = null)
         {
             // Allow null action for object pooling (timer will be inactive)
             if (interval < 0)
@@ -172,6 +177,7 @@ namespace Xuf.Core
             m_interval = Mathf.Max(interval, 0);
             m_loopCount = Math.Max(loopCount, 1);
             m_timeUnscaled = timeUnscaled;
+            m_owner = owner;
             m_elapsedTime = 0;
             m_currentCycleElapsedTime = 0;
             m_currentLoopCount = 0;
