@@ -4,6 +4,28 @@ using UnityEngine.Assertions;
 
 namespace Xuf.Core
 {
+    /// <summary>
+    /// 立即执行模式枚举
+    /// </summary>
+    public enum ExecuteImmediatelyMode
+    {
+        /// <summary>
+        /// 立即执行，但保持原有的时间累积逻辑
+        /// 例如：原本1s,2s,3s调用，在0.6s立即调用后，会在0.6s执行一次，1s时仍会正常执行
+        /// 1s,2s,3s => 0.6s,1s,2s
+        /// 注意：这会导致在短时间内有两次调用（立即执行 + 正常执行）
+        /// </summary>
+        ExtraCall,
+        
+        /// <summary>
+        /// 立即执行，并跳过即将到来的正常调用（推荐使用）
+        /// 例如：原本1s,2s,3s调用，在0.6s立即调用后，1s这次不再调用，但2s时仍会调用
+        /// 1s,2s,3s => 0.6s,2s,3s
+        /// 注意：这避免了额外调用，是最安全的立即执行方式
+        /// </summary>
+        KeepSchedule
+    }
+
     public class Timer
     {
         public const uint INFINITE_LOOPCOUNT = uint.MaxValue;
@@ -13,6 +35,7 @@ namespace Xuf.Core
         private bool m_active = false; // New property for pool-based approach
 
         private Action m_action = null;
+        private object m_owner = null; // Add owner field
 
         // Changed from readonly to allow reset for object pooling
         private float m_interval = 0;
@@ -35,12 +58,16 @@ namespace Xuf.Core
                 Assert.IsTrue(false, "Timer interval is less than 0");
             }
 
+            m_owner = owner;
             m_action = action;
             m_interval = Mathf.Max(interval, 0);
             m_loopCount = Math.Max(loopCount, 1);
             m_timeUnscaled = timeUnscaled;
             m_active = true; // Timer is active when created
         }
+
+        // Add Owner property
+        public object Owner => m_owner;
 
         public void Update(float deltaTime, float unscaledDeltaTime)
         {
@@ -146,6 +173,7 @@ namespace Xuf.Core
                 Assert.IsTrue(false, "Timer interval is less than 0");
             }
 
+            m_owner = owner;
             m_action = action;
             m_interval = Mathf.Max(interval, 0);
             m_loopCount = Math.Max(loopCount, 1);
@@ -157,6 +185,51 @@ namespace Xuf.Core
             m_isCompleted = false;
             m_accumulatedError = 0f;
             m_active = action != null; // Set active based on whether action is provided
+        }
+
+        /// <summary>
+        /// 立即执行timer的action，根据指定的模式调整后续调用时间
+        /// </summary>
+        /// <param name="mode">立即执行模式</param>
+        public void ExecuteImmediately(ExecuteImmediatelyMode mode = ExecuteImmediatelyMode.KeepSchedule)
+        {
+            if (!m_active || m_paused || m_action == null || m_isCompleted)
+            {
+                return;
+            }
+
+            // 立即执行action
+            try
+            {
+                m_action?.Invoke();
+            }
+            catch (Exception e)
+            {
+                LogUtils.Error($"Exception in timer immediate execution: {e.Message}\n{e.StackTrace}");
+            }
+
+            // 增加循环计数
+            m_currentLoopCount++;
+
+            // 检查是否完成
+            if (m_currentLoopCount >= m_loopCount && m_loopCount != INFINITE_LOOPCOUNT)
+            {
+                m_isCompleted = true;
+            }
+
+            // 根据模式调整时间
+            switch (mode)
+            {
+                case ExecuteImmediatelyMode.ExtraCall:
+                    break;
+
+                case ExecuteImmediatelyMode.KeepSchedule:
+                    // 调整当前周期时间，跳过即将到来的正常调用
+                    // 计算下一个正常调用时间点
+                    float nextExpectedTime = m_currentLoopCount * m_interval;
+                    m_elapsedTime = nextExpectedTime;
+                    break;
+            }
         }
     }
 }

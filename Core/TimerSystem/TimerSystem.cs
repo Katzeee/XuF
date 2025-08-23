@@ -356,5 +356,24 @@ namespace Xuf.Core
 
             return (activeCount, completedCount, totalError);
         }
+
+        /// <summary>
+        /// 立即执行指定ID的timer，默认使用KeepSchedule模式
+        /// </summary>
+        /// <param name="timerId">Timer的ID</param>
+        /// <param name="mode">立即执行模式，默认为KeepSchedule</param>
+        /// <returns>是否成功执行</returns>
+        public bool ExecuteTimerImmediately(int timerId, ExecuteImmediatelyMode mode = ExecuteImmediatelyMode.KeepSchedule)
+        {
+            var timer = GetTimer(timerId);
+            if (timer == null)
+            {
+                LogUtils.Warning($"TimerSystem: Timer with ID {timerId} not found or not active");
+                return false;
+            }
+
+            timer.ExecuteImmediately(mode);
+            return true;
+        }
     }
 }
