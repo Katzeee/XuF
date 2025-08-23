@@ -138,7 +138,7 @@ namespace Xuf.Core
             }
 
             // Check if we're currently in the Update loop
-            if (IsInUpdateLoop())
+            if (m_isInUpdateLoop)
             {
                 // Add to pending buffer instead of immediate execution
                 m_pendingAddTimers.Add((interval, action, timeUnscaled, pauseOnStart, index, owner));
@@ -167,7 +167,7 @@ namespace Xuf.Core
             }
 
             // Check if we're currently in the Update loop
-            if (IsInUpdateLoop())
+            if (m_isInUpdateLoop)
             {
                 // Add to pending buffer instead of immediate execution
                 m_pendingAddLoopTimers.Add((interval, loopCount, action, timeUnscaled, pauseOnStart, index, owner));
@@ -212,7 +212,7 @@ namespace Xuf.Core
         public void RemoveTimerWithoutOwner(int index)
         {
             // Check if we're currently in the Update loop
-            if (IsInUpdateLoop())
+            if (m_isInUpdateLoop)
             {
                 // Add to pending buffer instead of immediate execution
                 m_pendingRemoveTimers.Add(index);
@@ -241,7 +241,7 @@ namespace Xuf.Core
                 return;
             }
 
-            if (IsInUpdateLoop())
+            if (m_isInUpdateLoop)
             {
                 m_pendingRemoveTimers.Add(index);
                 return;
@@ -253,10 +253,6 @@ namespace Xuf.Core
 
         // Helper method to detect if we're currently in the Update loop
         private bool m_isInUpdateLoop = false;
-        private bool IsInUpdateLoop()
-        {
-            return m_isInUpdateLoop;
-        }
 
         public void ClearAllTimers()
         {
