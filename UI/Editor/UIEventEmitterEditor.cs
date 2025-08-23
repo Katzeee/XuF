@@ -51,6 +51,13 @@ public class UIEventEmitterEditor : Editor
     {
         serializedObject.Update();
 
+        // Display other properties first
+        var interactableProp = serializedObject.FindProperty("m_interactable");
+        if (interactableProp != null)
+        {
+            EditorGUILayout.PropertyField(interactableProp);
+        }
+        
         // Custom foldout for event configs list
         showEventConfigs = EditorGUILayout.Foldout(showEventConfigs, "Event Configs", true);
 
