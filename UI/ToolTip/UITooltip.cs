@@ -29,7 +29,34 @@ namespace Xuf.UI
 
         private void CreateTooltipPanel()
         {
-            // If we already have a tooltip panel, clean it up
+            // Check if we already have a tooltip panel as a child
+            Transform existingPanel = transform.Find("TooltipPanel");
+
+            // If we found an existing panel, use it
+            if (existingPanel != null)
+            {
+                tooltipPanel = existingPanel.gameObject;
+                tooltipTextComponent = tooltipPanel.GetComponentInChildren<TextMeshProUGUI>();
+                tooltipCanvas = tooltipPanel.GetComponent<Canvas>();
+
+                // Update the sorting order in case it changed
+                if (tooltipCanvas != null)
+                {
+                    tooltipCanvas.sortingOrder = sortingOrder;
+                }
+
+                // Update position in case offset changed
+                RectTransform tooltipRectTransform = tooltipPanel.GetComponent<RectTransform>();
+                if (tooltipRectTransform != null)
+                {
+                    tooltipRectTransform.localPosition = new Vector3(offset.x, offset.y, 0);
+                }
+
+
+                return;
+            }
+
+            // If we already have a tooltip panel reference but it's not a child, clean it up
             if (tooltipPanel != null)
             {
                 DestroyImmediate(tooltipPanel);
@@ -39,6 +66,7 @@ namespace Xuf.UI
             if (tooltipPrefab != null)
             {
                 tooltipPanel = Instantiate(tooltipPrefab);
+                tooltipPanel.name = "TooltipPanel"; // Ensure consistent naming
                 tooltipTextComponent = tooltipPanel.GetComponentInChildren<TextMeshProUGUI>();
 
                 if (tooltipTextComponent == null)
