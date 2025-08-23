@@ -46,6 +46,17 @@ namespace Xuf.Core
         {
             if (m_eventHandlers.TryGetValue(eventId, out var existing))
             {
+                // Check for duplicate registration
+                var invocationList = existing.GetInvocationList();
+                foreach (var registeredHandler in invocationList)
+                {
+                    if (AreHandlersEqual(registeredHandler, handler))
+                    {
+                        LogUtils.Warning($"[EventSystem] Attempted to register the same handler twice for event {eventId} (type: {typeof(T).Name}). This may indicate a programming error.");
+                        return;
+                    }
+                }
+
                 m_eventHandlers[eventId] = Delegate.Combine(existing, handler);
                 LogUtils.Trace($"[EventSystem] Added handler for event {eventId} (type: {typeof(T).Name}), total handlers: {m_eventHandlers[eventId].GetInvocationList().Length}");
             }
@@ -61,6 +72,25 @@ namespace Xuf.Core
         {
             if (m_eventHandlers.TryGetValue(eventId, out var existing))
             {
+                // Check if this specific handler is actually registered using GetInvocationList
+                var invocationList = existing.GetInvocationList();
+                bool handlerFound = false;
+
+                foreach (var registeredHandler in invocationList)
+                {
+                    if (AreHandlersEqual(registeredHandler, handler))
+                    {
+                        handlerFound = true;
+                        break;
+                    }
+                }
+
+                if (!handlerFound)
+                {
+                    LogUtils.Warning($"[EventSystem] Attempted to unsubscribe handler that was never registered for event {eventId} (type: {typeof(T).Name}). This usually indicates a lambda expression mismatch issue.");
+                    return;
+                }
+
                 var newHandler = Delegate.Remove(existing, handler);
                 if (newHandler == null)
                 {
@@ -173,6 +203,31 @@ namespace Xuf.Core
         // Debug properties
         public int QueuedEventCount => m_eventQueue.Count;
         public int EventsProcessedThisFrame => m_eventsProcessedThisFrame;
+        
+        // Compares two delegate handlers for functional equality beyond reference equality
+        private bool AreHandlersEqual(Delegate handler1, Delegate handler2)
+        {
+            // Quick reference check first (fastest path)
+            if (ReferenceEquals(handler1, handler2))
+            {
+                return true;
+            }
+            
+            // Check if method signatures match
+            if (handler1.Method != handler2.Method)
+            {
+                return false;
+            }
+            
+            // For static methods, target is null, so they're equal if Methods match
+            if (handler1.Target == null && handler2.Target == null)
+            {
+                return true;
+            }
+            
+            // For instance methods, both Method and Target must match
+            return ReferenceEquals(handler1.Target, handler2.Target);
+        }
     }
 }
 
