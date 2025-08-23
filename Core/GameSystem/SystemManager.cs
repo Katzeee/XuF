@@ -314,7 +314,7 @@ namespace Xuf.Core
             // Call OnDisable for all systems before clearing
             foreach (var system in m_systems)
             {
-                system.OnDisable();
+                DisableSystem(system);
             }
 
             m_systems.Clear();
