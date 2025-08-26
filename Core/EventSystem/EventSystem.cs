@@ -26,11 +26,22 @@ namespace Xuf.Core
         private float m_frameStartTime;
         private int m_eventsProcessedThisFrame;
 
-        // Configuration fields
-        public float maxProcessingTimePerFrame = 2.0f; // milliseconds
-        public int maxEventsPerFrame = 15;
+        // Configuration fields - now readonly and set in constructor
+        private readonly float m_maxProcessingTimePerFrame;
+        private readonly int m_maxEventsPerFrame;
 
         public int Priority => 900;
+
+        // Constructor with configurable parameters
+        public CEventSystem(float maxProcessingTimePerFrame = 2.0f, int maxEventsPerFrame = 300)
+        {
+            m_maxProcessingTimePerFrame = maxProcessingTimePerFrame;
+            m_maxEventsPerFrame = maxEventsPerFrame;
+        }
+
+        // Public properties to access current configuration
+        public float MaxProcessingTimePerFrame => m_maxProcessingTimePerFrame;
+        public int MaxEventsPerFrame => m_maxEventsPerFrame;
 
         public void Update(float deltaTime, float unscaledDeltaTime)
         {
@@ -175,8 +186,8 @@ namespace Xuf.Core
             var currentTime = Time.realtimeSinceStartup * 1000f;
             var timeUsed = currentTime - m_frameStartTime;
 
-            return timeUsed < maxProcessingTimePerFrame &&
-                   m_eventsProcessedThisFrame < maxEventsPerFrame;
+            return timeUsed < m_maxProcessingTimePerFrame &&
+                   m_eventsProcessedThisFrame < m_maxEventsPerFrame;
         }
 
         private void ProcessEventQueue()
