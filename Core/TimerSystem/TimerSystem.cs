@@ -17,8 +17,8 @@ namespace Xuf.Core
         private bool m_paused = false;
 
         // Buffer lists for pending operations to prevent modification during iteration
-        private List<(float interval, Action action, bool timeUnscaled, bool pauseOnStart, int timerId, object owner)> m_pendingAddTimers;
-        private List<(float interval, uint loopCount, Action action, bool timeUnscaled, bool pauseOnStart, int timerId, object owner)> m_pendingAddLoopTimers;
+        private List<PendingTimerData> m_pendingAddTimers;
+        private List<PendingLoopTimerData> m_pendingAddLoopTimers;
         private List<int> m_pendingRemoveTimers;
 
         public TimerSystem()
@@ -32,8 +32,8 @@ namespace Xuf.Core
             m_availableIndices = new Stack<int>(m_poolSize);
 
             // Initialize buffer lists
-            m_pendingAddTimers = new List<(float, Action, bool, bool, int, object)>();
-            m_pendingAddLoopTimers = new List<(float, uint, Action, bool, bool, int, object)>();
+            m_pendingAddTimers = new List<PendingTimerData>();
+            m_pendingAddLoopTimers = new List<PendingLoopTimerData>();
             m_pendingRemoveTimers = new List<int>();
 
             // Initialize all timers as inactive
@@ -84,11 +84,11 @@ namespace Xuf.Core
         private void ProcessPendingAddOperations()
         {
             // Process regular timers
-            foreach (var (interval, action, timeUnscaled, pauseOnStart, timerId, owner) in m_pendingAddTimers)
+            foreach (var pendingTimer in m_pendingAddTimers)
             {
-                var timer = m_timerPool[timerId];
-                timer.Reset(interval, 1, action, timeUnscaled, owner);
-                if (pauseOnStart)
+                var timer = m_timerPool[pendingTimer.TimerId];
+                timer.Reset(pendingTimer.Interval, 1, pendingTimer.Action, pendingTimer.TimeUnscaled, pendingTimer.Owner);
+                if (pendingTimer.PauseOnStart)
                 {
                     timer.Pause();
                 }
@@ -97,15 +97,21 @@ namespace Xuf.Core
             m_pendingAddTimers.Clear();
 
             // Process loop timers
-            foreach (var (interval, loopCount, action, timeUnscaled, pauseOnStart, timerId, owner) in m_pendingAddLoopTimers)
+            foreach (var pendingLoopTimer in m_pendingAddLoopTimers)
             {
-                var timer = m_timerPool[timerId];
-                timer.Reset(interval, loopCount, action, timeUnscaled, owner);
-                if (pauseOnStart)
+                var timer = m_timerPool[pendingLoopTimer.TimerId];
+                timer.Reset(pendingLoopTimer.Interval, pendingLoopTimer.LoopCount, pendingLoopTimer.Action, pendingLoopTimer.TimeUnscaled, pendingLoopTimer.Owner);
+                if (pendingLoopTimer.PauseOnStart)
                 {
                     timer.Pause();
                 }
                 timer.SetActive(true);
+
+                // Execute immediately if requested
+                if (pendingLoopTimer.ExecuteImmediately)
+                {
+                    timer.ExecuteImmediately(ExecuteImmediatelyMode.KeepSchedule);
+                }
             }
             m_pendingAddLoopTimers.Clear();
         }
@@ -141,7 +147,7 @@ namespace Xuf.Core
             if (m_isInUpdateLoop)
             {
                 // Add to pending buffer instead of immediate execution
-                m_pendingAddTimers.Add((interval, action, timeUnscaled, pauseOnStart, index, owner));
+                m_pendingAddTimers.Add(new PendingTimerData(interval, action, timeUnscaled, pauseOnStart, index, owner));
                 return index; // Return the real timer ID
             }
 
@@ -156,7 +162,7 @@ namespace Xuf.Core
             return index; // Return the index as the timer identifier
         }
 
-        public int AddLoopTimer(object owner, float interval, uint loopCount, Action action, bool timeUnscaled = false, bool pauseOnStart = false)
+        public int AddLoopTimer(object owner, float interval, uint loopCount, Action action, bool timeUnscaled = false, bool pauseOnStart = false, bool executeImmediately = false)
         {
             // Get available index first
             int index = GetAvailableIndex();
@@ -170,7 +176,7 @@ namespace Xuf.Core
             if (m_isInUpdateLoop)
             {
                 // Add to pending buffer instead of immediate execution
-                m_pendingAddLoopTimers.Add((interval, loopCount, action, timeUnscaled, pauseOnStart, index, owner));
+                m_pendingAddLoopTimers.Add(new PendingLoopTimerData(interval, loopCount, action, timeUnscaled, pauseOnStart, executeImmediately, index, owner));
                 return index; // Return the real timer ID
             }
 
@@ -181,6 +187,12 @@ namespace Xuf.Core
                 timer.Pause();
             }
             timer.SetActive(true);
+
+            // Execute immediately if requested
+            if (executeImmediately)
+            {
+                timer.ExecuteImmediately(ExecuteImmediatelyMode.KeepSchedule);
+            }
 
             return index; // Return the index as the timer identifier
         }
@@ -220,8 +232,8 @@ namespace Xuf.Core
             }
 
             // Handle pending timer removal - check if this timer is in pending add lists
-            m_pendingAddTimers.RemoveAll(item => item.timerId == index);
-            m_pendingAddLoopTimers.RemoveAll(item => item.timerId == index);
+            m_pendingAddTimers.RemoveAll(item => item.TimerId == index);
+            m_pendingAddLoopTimers.RemoveAll(item => item.TimerId == index);
 
             var timer = GetTimerWithoutOwner(index);
             if (timer != null)
@@ -236,8 +248,8 @@ namespace Xuf.Core
             var timer = GetTimer(owner, index);
             if (timer == null) // pending or not owned
             {
-                m_pendingAddTimers.RemoveAll(item => item.timerId == index && item.owner == owner);
-                m_pendingAddLoopTimers.RemoveAll(item => item.timerId == index && item.owner == owner);
+                m_pendingAddTimers.RemoveAll(item => item.TimerId == index && item.Owner == owner);
+                m_pendingAddLoopTimers.RemoveAll(item => item.TimerId == index && item.Owner == owner);
                 return;
             }
 
