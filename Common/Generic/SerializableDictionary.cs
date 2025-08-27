@@ -224,38 +224,28 @@ namespace Xuf.Common
             // Get the list property
             SerializedProperty listProp = getListProperty(property);
 
-            // Calculate rects
-            Rect foldoutRect = new Rect(position.x, position.y, position.width, EditorGUIUtility.singleLineHeight);
-
             // Draw foldout header
-            listProp.isExpanded = EditorGUI.Foldout(foldoutRect, listProp.isExpanded, label, true);
+            listProp.isExpanded = EditorGUILayout.Foldout(listProp.isExpanded, label, true);
 
             if (listProp.isExpanded)
             {
                 // Indent child elements
                 EditorGUI.indentLevel++;
 
-                // Calculate rects for Add and Validate buttons
-                Rect buttonRect = new Rect(position.x, position.y + EditorGUIUtility.singleLineHeight,
-                                           position.width - 60f, EditorGUIUtility.singleLineHeight);
-                Rect validateRect = new Rect(position.x + position.width - 60f,
-                                        position.y + EditorGUIUtility.singleLineHeight,
-                                        25f, EditorGUIUtility.singleLineHeight);
-                Rect addRect = new Rect(position.x + position.width - 30f,
-                                        position.y + EditorGUIUtility.singleLineHeight,
-                                        25f, EditorGUIUtility.singleLineHeight);
-
+                // Create horizontal layout for buttons and size info
+                EditorGUILayout.BeginHorizontal();
+                
                 // Display size info
-                EditorGUI.LabelField(buttonRect, $"Size: {listProp.arraySize}");
+                EditorGUILayout.LabelField($"Size: {listProp.arraySize}", GUILayout.ExpandWidth(true));
 
                 // Validate button
-                if (GUI.Button(validateRect, "✓"))
+                if (GUILayout.Button("✓", GUILayout.Width(25f)))
                 {
                     ValidateDictionary(listProp);
                 }
 
                 // Add button
-                if (GUI.Button(addRect, "+"))
+                if (GUILayout.Button("+", GUILayout.Width(25f)))
                 {
                     listProp.arraySize++;
 
@@ -268,25 +258,24 @@ namespace Xuf.Common
 
                     property.serializedObject.ApplyModifiedProperties();
                 }
+                
+                EditorGUILayout.EndHorizontal();
 
                 // Draw elements with individual delete buttons
-                float elementY = position.y + (EditorGUIUtility.singleLineHeight * 2f);
                 try
                 {
                     for (int i = 0; i < listProp.arraySize; i++)
                     {
                         SerializedProperty elementProp = listProp.GetArrayElementAtIndex(i);
-                        float elementHeight = EditorGUI.GetPropertyHeight(elementProp, true);
 
-                        // Calculate rects for element and its remove button
-                        Rect elementRect = new Rect(position.x, elementY, position.width - 30f, elementHeight);
-                        Rect removeButtonRect = new Rect(position.x + position.width - 30f, elementY, 25f, EditorGUIUtility.singleLineHeight);
-
+                        // Create horizontal layout for element and remove button
+                        EditorGUILayout.BeginHorizontal();
+                        
                         // Display element with index in label
-                        EditorGUI.PropertyField(elementRect, elementProp, new GUIContent($"Element {i}"), true);
+                        EditorGUILayout.PropertyField(elementProp, new GUIContent($"Element {i}"), true);
 
                         // Individual remove button for each element
-                        if (GUI.Button(removeButtonRect, "×"))
+                        if (GUILayout.Button("×", GUILayout.Width(25f)))
                         {
                             // Record undo and directly delete the array element at this index
                             property.serializedObject.Update();
@@ -300,8 +289,8 @@ namespace Xuf.Common
                             // Break to avoid issues with modified collection during iteration
                             break;
                         }
-
-                        elementY += elementHeight + EditorGUIUtility.standardVerticalSpacing;
+                        
+                        EditorGUILayout.EndHorizontal();
                     }
                 }
                 catch (ExitGUIException)
@@ -318,22 +307,9 @@ namespace Xuf.Common
 
         public override float GetPropertyHeight(SerializedProperty property, GUIContent label)
         {
-            SerializedProperty listProp = getListProperty(property);
-
-            if (!listProp.isExpanded)
-                return EditorGUIUtility.singleLineHeight;
-
-            // Base height for header and buttons
-            float height = EditorGUIUtility.singleLineHeight * 2f;
-
-            // Add height for each element
-            for (int i = 0; i < listProp.arraySize; i++)
-            {
-                SerializedProperty elementProp = listProp.GetArrayElementAtIndex(i);
-                height += EditorGUI.GetPropertyHeight(elementProp, true) + EditorGUIUtility.standardVerticalSpacing;
-            }
-
-            return height;
+            // When using EditorGUILayout, Unity automatically handles height calculations
+            // We can return a minimal height since the layout system will expand as needed
+            return EditorGUIUtility.singleLineHeight;
         }
 
         private void ValidateDictionary(SerializedProperty listProperty)
