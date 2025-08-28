@@ -1,8 +1,11 @@
-using UnityEditor;
 using UnityEngine;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 namespace Xuf.Utils
 {
@@ -11,6 +14,7 @@ namespace Xuf.Utils
     /// </summary>
     public static partial class EditorUtils
     {
+#if UNITY_EDITOR
         /// <summary>
         /// Display any object with full control over include/exclude filters
         /// </summary>
@@ -188,5 +192,6 @@ namespace Xuf.Utils
         }
 
         #endregion
+#endif
     }
 }

@@ -2,7 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+
+#if UNITY_EDITOR
 using UnityEditor;
+#endif
 
 namespace Xuf.Utils
 {
@@ -41,6 +44,7 @@ namespace Xuf.Utils
             return serializableType?.Type;
         }
 
+#if UNITY_EDITOR
 		private static List<Type> GetDerivedTypes()
         {
 			// Use Unity's TypeCache for fast, cached type discovery in Editor
@@ -103,6 +107,7 @@ namespace Xuf.Utils
                 menu.DropDown(position);
             }
         }
+#endif
 
 		private static string ExtractFullName(string storedName)
 		{

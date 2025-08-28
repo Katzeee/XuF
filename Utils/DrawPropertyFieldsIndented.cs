@@ -1,9 +1,14 @@
+using UnityEngine;
+
+#if UNITY_EDITOR
 using UnityEditor;
+#endif
 
 namespace Xuf.Utils
 {
     public static partial class EditorUtils
     {
+#if UNITY_EDITOR
         public static void DrawPropertyFieldsIndented(SerializedProperty property, string label)
         {
             EditorGUILayout.LabelField(label, EditorStyles.boldLabel);
@@ -29,5 +34,6 @@ namespace Xuf.Utils
 
             EditorGUI.indentLevel--;
         }
+#endif
     }
 }
