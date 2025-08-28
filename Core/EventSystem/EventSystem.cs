@@ -14,7 +14,7 @@ namespace Xuf.Core
     internal struct QueuedEvent
     {
         public EEventId eventId;
-        public CEventArgBase eventArg;
+        public Action executeAction;
         public float timestamp;
     }
 
@@ -174,7 +174,7 @@ namespace Xuf.Core
             var queuedEvent = new QueuedEvent
             {
                 eventId = eventId,
-                eventArg = data,
+                executeAction = () => ExecuteEventImmediate(eventId, data),
                 timestamp = Time.time
             };
 
@@ -196,17 +196,14 @@ namespace Xuf.Core
             {
                 var queuedEvent = m_eventQueue.Dequeue();
 
-                if (m_eventHandlers.TryGetValue(queuedEvent.eventId, out var handler))
+                try
                 {
-                    try
-                    {
-                        handler.DynamicInvoke(queuedEvent.eventArg);
-                        m_eventsProcessedThisFrame++;
-                    }
-                    catch (Exception e)
-                    {
-                        LogUtils.Error($"[EventSystem] Error executing queued event {queuedEvent.eventId}: {e.Message}");
-                    }
+                    queuedEvent.executeAction();
+                    m_eventsProcessedThisFrame++;
+                }
+                catch (Exception e)
+                {
+                    LogUtils.Error($"[EventSystem] Error executing queued event {queuedEvent.eventId}: {e.Message}");
                 }
             }
         }
@@ -214,7 +211,7 @@ namespace Xuf.Core
         // Debug properties
         public int QueuedEventCount => m_eventQueue.Count;
         public int EventsProcessedThisFrame => m_eventsProcessedThisFrame;
-        
+
         // Compares two delegate handlers for functional equality beyond reference equality
         private bool AreHandlersEqual(Delegate handler1, Delegate handler2)
         {
@@ -223,19 +220,19 @@ namespace Xuf.Core
             {
                 return true;
             }
-            
+
             // Check if method signatures match
             if (handler1.Method != handler2.Method)
             {
                 return false;
             }
-            
+
             // For static methods, target is null, so they're equal if Methods match
             if (handler1.Target == null && handler2.Target == null)
             {
                 return true;
             }
-            
+
             // For instance methods, both Method and Target must match
             return ReferenceEquals(handler1.Target, handler2.Target);
         }
