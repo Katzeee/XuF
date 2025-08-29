@@ -62,9 +62,11 @@ namespace Xuf.UI
                 return;
 
             var oldData = _data;
+            OnPreDataUpdate(_data);
             updateAction(_data);
+            OnDataUpdateReady(oldData, _data);
             NotifyDataChanged();
-            OnDataUpdated(oldData, _data);
+            OnPostDataUpdate(oldData, _data);
         }
 
 
@@ -83,9 +85,11 @@ namespace Xuf.UI
                 return;
 
             var oldData = _data;
+            OnPreDataUpdate(_data);
             _data = newData;
+            OnDataUpdateReady(oldData, _data);
             NotifyDataChanged();
-            OnDataUpdated(oldData, _data);
+            OnPostDataUpdate(oldData, _data);
         }
 
         /// <summary>
@@ -109,11 +113,26 @@ namespace Xuf.UI
         public virtual void OnModelDestroyed() { }
 
         /// <summary>
-        /// Called when data is updated
-        /// Override this method to add custom logic after data changes
+        /// Called before data is updated
+        /// Override this method to add custom logic before data changes
+        /// </summary>
+        /// <param name="currentData">Current data value before update</param>
+        public virtual void OnPreDataUpdate(T currentData) { }
+
+        /// <summary>
+        /// Called after data is updated but before notifying observers
+        /// Override this method to add custom logic between data update and UI refresh
         /// </summary>
         /// <param name="oldData">Previous data value</param>
         /// <param name="newData">New data value</param>
-        public virtual void OnDataUpdated(T oldData, T newData) { }
+        public virtual void OnDataUpdateReady(T oldData, T newData) { }
+
+        /// <summary>
+        /// Called after data is updated and observers are notified
+        /// Override this method to add custom logic after UI refresh
+        /// </summary>
+        /// <param name="oldData">Previous data value</param>
+        /// <param name="newData">New data value</param>
+        public virtual void OnPostDataUpdate(T oldData, T newData) { }
     }
 }
