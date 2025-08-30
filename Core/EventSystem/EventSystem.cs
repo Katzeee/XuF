@@ -21,12 +21,10 @@ namespace Xuf.Core
     public struct EventSystemConfig
     {
         public float maxProcessingTimePerFrame;
-        public int maxConsecutiveEvents;
 
-        public EventSystemConfig(float maxProcessingTimePerFrame = 2.0f, int maxConsecutiveEvents = 3)
+        public EventSystemConfig(float maxProcessingTimePerFrame = 2.0f)
         {
             this.maxProcessingTimePerFrame = maxProcessingTimePerFrame;
-            this.maxConsecutiveEvents = maxConsecutiveEvents;
         }
     }
 
@@ -59,7 +57,6 @@ namespace Xuf.Core
             this.eventCount = 0;
             this.windowStartTime = 0f;
         }
-
 
         public void Reset(float currentTime)
         {
@@ -111,9 +108,6 @@ namespace Xuf.Core
         // Throttling configuration and state (merged)
         private Dictionary<EEventId, ThrottleInfo> m_throttleInfos = new();
 
-        // Fair scheduling to prevent starvation
-        private Dictionary<EEventId, int> m_consecutiveExecutionCounts = new();
-
         public int Priority => 900;
 
         // Constructor with configurable parameters
@@ -122,17 +116,14 @@ namespace Xuf.Core
             m_config = config;
         }
 
-        // Alternative constructor for backward compatibility
-        public CEventSystem(float maxProcessingTimePerFrame, int maxConsecutiveEvents)
-            : this(new EventSystemConfig(maxProcessingTimePerFrame, maxConsecutiveEvents))
-        {
-        }
-
         // Public properties to access current configuration
         public EventSystemConfig Config => m_config;
 
         public void Update(float deltaTime, float unscaledDeltaTime)
         {
+            // First pass: Apply DropOldest strategy in a single traversal
+            ApplyDropOldestStrategiesInQueue();
+
             m_frameStartTime = Time.realtimeSinceStartup * 1000f;
             m_eventsProcessedThisFrame = 0;
 
@@ -275,11 +266,6 @@ namespace Xuf.Core
 
         private void ProcessEventQueue()
         {
-            // Reset consecutive execution counts each frame
-            m_consecutiveExecutionCounts.Clear();
-
-            // First pass: Apply DropOldest strategy in a single traversal
-            ApplyDropOldestStrategiesInQueue();
 
             // If no events in queue, we're done
             if (m_eventQueue.Count == 0)
@@ -288,43 +274,18 @@ namespace Xuf.Core
             }
 
             // Process events until we run out of frame budget
-            LinkedListNode<QueuedEvent> currentNode = null;
             while (m_eventQueue.Count > 0 && HasFrameBudget())
             {
-                // Find next event to execute, continuing from where we left off
-                var nextEventNode = FindNextExecutableEvent(currentNode);
+                // Simply process events in order (FIFO)
+                var firstNode = m_eventQueue.First;
+                var queuedEvent = firstNode.Value;
+                m_eventQueue.RemoveFirst();
 
-                // If we couldn't find any executable event, we're done
-                if (nextEventNode == null)
-                    break;
-
-                // Remember the next node for continuing traversal
-                currentNode = nextEventNode.Next;
-
-                // If we've wrapped around to the beginning, we've completed a full pass
-                if (currentNode == null && m_eventQueue.Count > 1)
-                {
-                    currentNode = m_eventQueue.First;
-
-                    // Reset consecutive counts after each complete pass through the queue
-                    // This ensures fair distribution across multiple passes
-                    LogUtils.Trace("[EventSystem] Completed full queue pass with remaining budget. Resetting consecutive counts.");
-                    m_consecutiveExecutionCounts.Clear();
-                }
-
-                // Execute the event
-                var queuedEvent = nextEventNode.Value;
-                m_eventQueue.Remove(nextEventNode);
                 try
                 {
                     queuedEvent.executeAction();
                     m_eventsProcessedThisFrame++;
-
-                    // Update consecutive execution count
-                    if (!m_consecutiveExecutionCounts.ContainsKey(queuedEvent.eventId))
-                        m_consecutiveExecutionCounts[queuedEvent.eventId] = 0;
-                    m_consecutiveExecutionCounts[queuedEvent.eventId]++;
-                    LogUtils.Trace($"[EventSystem] Executed event {queuedEvent.eventId}, consecutive: {m_consecutiveExecutionCounts[queuedEvent.eventId]}");
+                    LogUtils.Trace($"[EventSystem] Executed event {queuedEvent.eventId}");
                 }
                 catch (Exception e)
                 {
@@ -466,46 +427,7 @@ namespace Xuf.Core
             }
         }
 
-        private LinkedListNode<QueuedEvent> FindNextExecutableEvent(LinkedListNode<QueuedEvent> startNode = null)
-        {
-            // Start from the provided node or from the beginning if null
-            var current = startNode ?? m_eventQueue.First;
-            var startingPoint = current;
-
-            // If we're at the end of the queue, wrap around to the beginning
-            if (current == null && m_eventQueue.Count > 0)
-            {
-                current = m_eventQueue.First;
-                startingPoint = current;
-            }
-
-            // No events in queue
-            if (current == null)
-                return null;
-
-            // Try to find an event that hasn't reached consecutive limit
-            do
-            {
-                var eventId = current.Value.eventId;
-
-                // Check if this event type has reached consecutive execution limit
-                if (!m_consecutiveExecutionCounts.TryGetValue(eventId, out int count) ||
-                    count < m_config.maxConsecutiveEvents)
-                {
-                    // This event can be executed
-                    return current;
-                }
-
-                // Move to next event, wrap around if needed
-                current = current.Next ?? m_eventQueue.First;
-
-                // If we've checked all events and come back to the start, break
-            } while (current != startingPoint);
-
-            // If all events have reached consecutive limit, return the starting point
-            // This ensures progress is always made
-            return startingPoint;
-        }
+        // Method removed - no longer needed since we're not doing fair scheduling
 
         // Configuration methods
         public void ConfigureEventThrottling(EEventId eventId, ThrottleConfig config)
