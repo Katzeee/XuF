@@ -11,6 +11,18 @@ namespace Xuf.Core
         Smart         // Use frame budget to decide
     }
 
+    public struct EventSystemConfig
+    {
+        public float maxProcessingTimePerFrame;
+        public int maxEventsPerFrame;
+
+        public EventSystemConfig(float maxProcessingTimePerFrame = 2.0f, int maxEventsPerFrame = 300)
+        {
+            this.maxProcessingTimePerFrame = maxProcessingTimePerFrame;
+            this.maxEventsPerFrame = maxEventsPerFrame;
+        }
+    }
+
     internal struct QueuedEvent
     {
         public EEventId eventId;
@@ -26,22 +38,25 @@ namespace Xuf.Core
         private float m_frameStartTime;
         private int m_eventsProcessedThisFrame;
 
-        // Configuration fields - now readonly and set in constructor
-        private readonly float m_maxProcessingTimePerFrame;
-        private readonly int m_maxEventsPerFrame;
+        // Configuration field - now using the new config struct
+        private readonly EventSystemConfig m_config;
 
         public int Priority => 900;
 
         // Constructor with configurable parameters
-        public CEventSystem(float maxProcessingTimePerFrame = 2.0f, int maxEventsPerFrame = 300)
+        public CEventSystem(EventSystemConfig config = default)
         {
-            m_maxProcessingTimePerFrame = maxProcessingTimePerFrame;
-            m_maxEventsPerFrame = maxEventsPerFrame;
+            m_config = config;
+        }
+
+        // Alternative constructor for backward compatibility
+        public CEventSystem(float maxProcessingTimePerFrame, int maxEventsPerFrame)
+            : this(new EventSystemConfig(maxProcessingTimePerFrame, maxEventsPerFrame))
+        {
         }
 
         // Public properties to access current configuration
-        public float MaxProcessingTimePerFrame => m_maxProcessingTimePerFrame;
-        public int MaxEventsPerFrame => m_maxEventsPerFrame;
+        public EventSystemConfig Config => m_config;
 
         public void Update(float deltaTime, float unscaledDeltaTime)
         {
@@ -186,8 +201,8 @@ namespace Xuf.Core
             var currentTime = Time.realtimeSinceStartup * 1000f;
             var timeUsed = currentTime - m_frameStartTime;
 
-            return timeUsed < m_maxProcessingTimePerFrame &&
-                   m_eventsProcessedThisFrame < m_maxEventsPerFrame;
+            return timeUsed < m_config.maxProcessingTimePerFrame &&
+                   m_eventsProcessedThisFrame < m_config.maxEventsPerFrame;
         }
 
         private void ProcessEventQueue()
